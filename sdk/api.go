@@ -11,7 +11,7 @@ import (
 
 func (c *Client) GetVulnerabilityFindings(ctx context.Context, query FindingsQuery) ([]VulnerabilityFinding, error) {
 	var allResults []VulnerabilityFinding
-	baseURL := fmt.Sprintf("%s/organizations/%s/vulnerability-findings", c.baseURL, query.OrgID)
+	baseURL := fmt.Sprintf("%s/organizations/%s/vulnerability-findings", c.baseURL, c.orgID)
 
 	// Manually construct query parameters
 	var queryParams []string

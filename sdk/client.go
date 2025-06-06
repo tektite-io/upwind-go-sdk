@@ -17,6 +17,7 @@ type HTTPClient interface {
 
 type Client struct {
 	baseURL    string
+	orgID      string
 	httpClient HTTPClient
 	oauthCfg   *clientcredentials.Config
 	tokenSrc   oauth2.TokenSource
@@ -25,7 +26,7 @@ type Client struct {
 	retries    int
 }
 
-func NewClient(baseURL, tokenURL, clientID, clientSecret, scope string, retries int, httpClient HTTPClient) *Client {
+func NewClient(baseURL, tokenURL, clientID, clientSecret, orgID, scope string, retries int, httpClient HTTPClient) *Client {
 	cfg := &clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -42,6 +43,7 @@ func NewClient(baseURL, tokenURL, clientID, clientSecret, scope string, retries 
 
 	return &Client{
 		baseURL:    baseURL,
+		orgID:      orgID,
 		httpClient: httpClient,
 		oauthCfg:   cfg,
 		tokenSrc:   tokenSrc,
