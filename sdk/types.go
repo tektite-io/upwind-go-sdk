@@ -15,6 +15,8 @@ type VulnerabilityFinding struct {
 }
 
 type Vulnerability struct {
+	Name              string    `json:"name,omitempty"`
+	Description       string    `json:"description,omitempty"`
 	Exploitable       bool      `json:"exploitable"`
 	NVDDescription    string    `json:"nvd_description"`
 	NVDCVEID          string    `json:"nvd_cve_id"`
@@ -79,7 +81,6 @@ type Finding struct {
 }
 
 type FindingsQuery struct {
-	OrgID                      string
 	ImageName                  *string
 	InUse                      *bool
 	IngressActiveCommunication *bool
