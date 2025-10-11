@@ -1,0 +1,11 @@
+{
+  "client_id": "your_client_id_here",
+  "client_secret": "your_client_secret_here",
+  "organization_id": "your_organization_id_here",
+  "region": "US",
+  "max_retries": 3,
+  "max_concurrency": 10,
+  "page_size": 100,
+  "rate_limit_per_second": 10
+}
+

@@ -1,0 +1,4078 @@
+openapi: 3.0.1
+info:
+  version: unversioned
+  title: Introduction
+  description: |
+    ## Overview
+
+    The Management REST API v1 represents a collection of endpoints designed for the execution of administrative tasks programmatically. Tailored for utilization by back-end servers or trusted entities, the API facilitates integration, data retrieval, and workflow automation.
+
+    The API provides a powerful set of tools to interact with your organization's resources, including [Threats](/restapi/v1/threats), [Vulnerabilities](/restapi/v1/vulnerabilities), [Configurations](/restapi/v1/configurations), and [Workflows](/restapi/v1/workflows). Whether you are building applications, integrating services, or exploring data, this documentation serves as your guide through the various endpoints and functionalities offered by our API.
+
+    When you make a request to the API, you will specify an HTTP method and a path. Additionally, you might also specify request headers and path, query, or body parameters. The API will return the response status code, response headers, and potentially a response body.
+
+    The API reference documentation describes the HTTP method, path, and parameters for every operation. It also displays example requests and responses for each operation.
+
+    ## Authentication
+
+    To access the endpoints of the API, you need to authenticate your requests. We use OAuth 2.0, a widely adopted industry standard for authorization, to secure and control access to the API.
+
+    The API uses [JSON Web Tokens (JWTs)](https://datatracker.ietf.org/doc/html/rfc7519) access tokens to authenticate requests. The API access token's scopes claim indicates which request methods can be performed when calling the API. Trying to perform any request method not permitted within the set scopes will result in a **403 Forbidden** response.
+
+    You can authenticate your request by adding an access token in the [Authorization](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-bearer-20#section-2.1) HTTP header using the [Bearer authentication scheme](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-bearer-20). To obtain an access token, you must first obtain client credentials.
+
+    ### Obtaining client credentials
+
+    Before you can make requests to the API, you will need to obtain client credentials. Follow the steps in the [Generate New Credentials](/settings/credentials#generate-new-credentials) section of the [Credentials](/settings/credentials) page to generate a client ID and client secret unique to your application.
+
+    ### Obtaining access token
+
+    Now that you have your client credentials, proceed with obtaining an access token. To get a token by using the client credentials grant, send a POST request to the OAuth 2.0 token endpoint URL (`/oauth/token`). All requests to the token endpoint should be an HTTP POST.
+
+    :::important
+    The `audience` parameter in your token request must match the regional API endpoint you plan to use. This ensures your access token is valid for the correct region. An access token obtained with `audience=https://api.upwind.io` will only work with the US API endpoint and cannot be used with EU or ME endpoints.
+    :::
+
+    #### For US region
+    ```bash
+    curl --request POST \
+      --url "https://auth.upwind.io/oauth/token" \
+      --data-urlencode 'client_id=YOUR_CLIENT_ID' \
+      --data-urlencode 'client_secret=YOUR_CLIENT_SECRET' \
+      --data-urlencode 'audience=https://api.upwind.io' \
+      --data-urlencode 'grant_type=client_credentials'
+    ```
+
+    #### For EU region
+    ```bash
+    curl --request POST \
+      --url "https://auth.upwind.io/oauth/token" \
+      --data-urlencode 'client_id=YOUR_CLIENT_ID' \
+      --data-urlencode 'client_secret=YOUR_CLIENT_SECRET' \
+      --data-urlencode 'audience=https://api.eu.upwind.io' \
+      --data-urlencode 'grant_type=client_credentials'
+    ```
+
+    #### For ME region
+    ```bash
+    curl --request POST \
+      --url "https://auth.upwind.io/oauth/token" \
+      --data-urlencode 'client_id=YOUR_CLIENT_ID' \
+      --data-urlencode 'client_secret=YOUR_CLIENT_SECRET' \
+      --data-urlencode 'audience=https://api.me.upwind.io' \
+      --data-urlencode 'grant_type=client_credentials'
+    ```
+
+    :::warning
+    Treat your access token like a password and consider using another service to store your token securely.
+    :::
+
+    ### Authenticating
+
+    Once you have obtained an access token, you can authenticate your API requests by including it in the [Authorization](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-bearer-20#section-2.1) HTTP header using the [Bearer authentication scheme](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-bearer-20).
+
+    For example, to authenticate a request to list threat detections, include your access token in the `Authorization` header:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    ## Requests
+
+    To make a request, first find the HTTP method and the path for the operation that you want to use. For example, the "List Threat Detections" operation uses the `GET` method and the `/threat-detections` path. For the full reference documentation for this operation, see [List Threat Detections](/restapi/v1/list-threat-detections).
+
+    Prepend the base URL for the API to the path to get the full URL. Choose the appropriate regional endpoint:
+    - **US**: `https://api.upwind.io`
+    - **EU**: `https://api.eu.upwind.io`
+    - **ME**: `https://api.me.upwind.io`
+
+    For instance, on the command line, use the `curl` command. Specify the HTTP method using the `--request` or `-X` flag, and provide the full URL using the `--url` flag.
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    :::note
+    If you get a message similar to "command not found: curl", you may need to download and install `curl`. For more information, see [the curl project download page](https://curl.se/download.html).
+    :::
+
+    ### Using headers
+
+    Most operations do not require specifying headers other than the `Authorization` header. Other operations may specify that you should pass an `Content-Type` header with a value of `application/json` or additional headers.
+
+    To send a header in a `curl` command, use the `--header` or `-H` flag followed by the header in `key: value` format.
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    ### Using path parameters
+
+    Path parameters modify the operation path. For example, the "List threat detections" path is `/v1/organizations/{organization-id}/threat-detections`. The curly brackets `{}` denote path parameters that you need to specify. In this case, you must specify your organization identifier. For the full reference documentation for this operation, see [List Threat Detections](/restapi/v1/list-threat-detections).
+
+    For example, to get a list of Threat Detection objects from the `org_123456789` organization, replace `{organization-id}` with `org_123456789` and prepend the base URL for the API. The full path is `https://api.upwind.io/v1/organizations/org_123456789/threat-detections`.
+
+    ### Using query parameters
+
+    Query parameters allow you to control what data is returned for a request. For example, a query parameter may let you specify how many items are returned when the response is paginated.
+
+    For `curl` commands, add a `?` to the end of the path, then append your query parameter name and value in the form `name=value`. Separate multiple query parameters with `&`.
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections?severity=CRITICAL" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    ### Using body parameters
+
+    Body parameters allow you to pass additional data to the API. For example, the "Update a threat detection" operation allows you to change the status of a detection. For the full reference documentation for this operation, see [Update a threat detection](/restapi/v1/update-threat-detection).
+
+    For `curl` commands, use the `--data` flag to pass the body parameters in a JSON object.
+
+    ```bash
+    curl --request PATCH \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections/{detection-id}" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+      --header "Content-Type: application/json" \
+      --data '{
+        "status": "ARCHIVED"
+      }'
+    ```
+
+    The operation updates the threat detection and returns data about the modified detection. For more information about using the response, see the [Using the response](#using-the-response) section.
+
+    ### Using the response
+
+    Every request will return an HTTP status code that indicates the success of the response. For more information about response codes, see [the MDN HTTP response status code documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status).
+
+    ### About the response code and headers
+
+    To view the status code and headers, use the `--include` or `--i` flag when you send your request.
+
+    For example, this request:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+      --include
+    ```
+
+    Returns the response code and headers like:
+
+    ```bash
+    HTTP/2 200
+    ```
+
+    In this example, the response code is `200`, which indicates a successful request.
+
+    ### About the response body
+
+    Most operations will return a response body. Unless otherwise specified, the response body is in JSON format.
+
+    For example, this request returns a list of Threat Detection objects with data about each detection:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    You can also filter threat detections using query parameters. For example, to get all HIGH severity threat detections:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections?severity=HIGH" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    ## Pagination
+
+    Many list endpoints return large datasets that are divided into smaller, manageable chunks called pages. The API supports two types of pagination to help you navigate through these results efficiently.
+
+    Each list endpoint supports one of the two pagination methods based on the potential amount of data that the endpoint can return. Information about which pagination method is used can be found on the specific endpoint's reference page.
+
+    ### Page-based Pagination
+
+    Page-based pagination uses traditional page numbers to navigate through results. This method is useful when you need to jump to specific pages or when the total number of pages is known.
+
+    #### Parameters
+    - `page`: Specifies the page number for pagination (default: 1)
+    - `per-page`: Specifies how many results are returned on a page (default: 100)
+
+    For example, to get the first page with 50 results per page:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections?page=1&per-page=50" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    To get the second page:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/threat-detections?page=2&per-page=50" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    ### Token-based Pagination
+
+    Token-based pagination uses opaque tokens to navigate through results. This method is more efficient for large datasets and ensures consistent results even when data is being modified during pagination.
+
+    #### Parameters
+    - `page-token`: Specifies the token for fetching subsequent pages in a paginated result set
+    - `per-page`: Specifies how many results are returned on a page (default: 100)
+
+    #### Response Headers
+    - `Link`: Provides pagination links for navigating through the result set, formatted as HTTP link headers
+
+    For example, to get the first page:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/coniguration-findings?per-page=50" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    To get the next page, use the page-token from the previous response:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.upwind.io/v1/organizations/{organization-id}/coniguration-findings?page-token=eyJjdXJzb3IiOiIxMjM0NTY3ODkwIn0&per-page=50" \
+      --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    #### Working with Link Headers
+
+    When using token-based pagination, the response includes a `Link` header with navigation URLs. This header follows the [RFC 5988](https://datatracker.ietf.org/doc/html/rfc5988) standard for web linking and provides ready-to-use URLs for pagination navigation.
+
+    ```bash
+    Link: <https://api.upwind.io/v1/organizations/org_123456789/configuration-findings?page-token=eyJjdXJzb3IiOiIxMjM0NTY3ODkwIn0&per-page=50>; rel="next"
+    ```
+
+    The Link header may contain multiple relationships:
+    - `rel="first"`: URL for the first page of results
+    - `rel="next"`: URL for the next page of results (if available)
+    - `rel="prev"`: URL for the previous page of results (if available)
+    - `rel="last"`: URL for the last page of results (when determinable)
+
+    Multiple links are comma-separated. For example:
+
+    ```bash
+    Link: <https://api.upwind.io/v1/organizations/org_123456789/configuration-findings?page-token=abc123>; rel="first", <https://api.upwind.io/v1/organizations/org_123456789/configuration-findings?page-token=xyz789>; rel="next"
+    ```
+
+    You can parse this header to automatically navigate through pages without manually constructing URLs or managing page tokens. This approach is particularly useful for automated data processing workflows where you need to iterate through all available data.
+
+    ## Next steps
+
+    This article demonstrates how to make requests to the API. For more practice, try listing threat detections with different filters or retrieving a specific threat detection by ID. If you encounter any issues or have questions, refer to our [Support](/#contact-us-247-over-chat-email-or-slack) through various channels.
+
+    Happy coding! 🏄🏻‍♀️
+servers:
+  - url: https://api.upwind.io
+    description: Production endpoint (US)
+  - url: https://api.eu.upwind.io
+    description: Production endpoint (EU)
+  - url: https://api.me.upwind.io
+    description: Production endpoint (ME)
+tags:
+  - name: threats
+    x-displayName: Threats
+    description: The Threats resource offers a range of methods for listing, retrieving, and deleting threat detections.
+  - name: vulnerabilities
+    x-displayName: Vulnerabilities
+    description: The Vulnerabilities resource offers a range of methods for listing, retrieving, and deleting vulnerability findings.
+  - name: configurations
+    x-displayName: Configurations
+    description: The Configurations resource offers a range of methods for listing, retrieving, and deleting configuration findings and rules.
+  - name: api-security
+    x-displayName: API Security
+    description: The API Security resource offers methods for retrieving API catalog endpoints and their security information.
+  - name: packages
+    x-displayName: Packages
+    description: The Packages resource offers methods for retrieving Software Bill of Materials (SBOM) package details.
+  - name: workflows
+    x-displayName: Workflows
+    description: The Workflows resource offers a range of methods for listing, retrieving, and deleting workflows.
+  - name: integrations
+    x-displayName: Integrations
+    description: The Integrations resource offers methods for managing various integrations with external systems, including integration webhooks.
+  - name: cloud-accounts
+    x-displayName: Cloud Accounts
+    description: The Cloud Accounts resource offers methods for creating, updating, and deleting cloud accounts for monitoring and security analysis.
+  - name: events
+    x-displayName: Events
+    description: The Events resource offers a range of methods for listing, retrieving, and deleting events.
+paths:
+  /v1/organizations/{organization-id}/events:
+    post:
+      summary: Create an event
+      description: |
+        A `POST` request sent to the endpoint root creates an Event object that is associated with the specified organization. To learn more about Events, refer to the [Continuous Integration (CI)](/integrations/continuous-integration/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - events
+      operationId: createEvent
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventList'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/threat-events:
+    get:
+      summary: List events
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Threat Events objects that are associated with the specified organization. To learn more about Threat Events, refer to the [Events Overview](/threats/events/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - threats
+      operationId: listThreatEvents
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: cloud-account-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters events by the cloud account ID.
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters events by their level of severity.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters events by their category.
+          enum:
+            - NETWORK
+            - PROCESS
+            - FILE_SYSTEM
+            - EXCESSIVE_PRIVILEGE
+            - CLOUD_LOGS
+            - CLOUD_ACTIVITY_LOGS
+            - FILE_EVENTS
+            - FILES
+            - CLOUD_TRAIL
+            - SYSCALL_EVENT
+            - API_SECURITY
+            - NETWORK_BASELINE
+        - name: min-first-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters events by the earliest timestamp (in ISO8601 format) when they were first seen.
+        - name: max-first-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters events by the latest timestamp (in ISO8601 format) when they were first seen.
+        - name: min-last-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters events by the earliest timestamp (in ISO8601 format) when they were last seen.
+        - name: max-last-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters events by the latest timestamp (in ISO8601 format) when they were last seen.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+          format: int32
+          default: 1
+          description: The page number to retrieve. Used for pagination along with the `per-page` parameter.
+        - name: per-page
+          in: query
+          required: false
+          schema:
+            type: integer
+          format: int32
+          default: 100
+          description: Specifies how many results are returned on a page.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ThreatEvent'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/threat-detections:
+    get:
+      summary: List detections
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Threat Detection objects that are associated with the specified organization. To learn more about Threat Detections, refer to the [Detections Overview](/threats/detections/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - threats
+      operationId: listThreatDetections
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters detections by their level of severity.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters detections by their type.
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters detections by their category.
+          enum:
+            - NETWORK
+            - PROCESS
+            - CLOUD_LOGS
+        - name: min-first-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters detections by the earliest timestamp (in ISO8601 format) when they were first seen.
+        - name: max-first-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters detections by the latest timestamp (in ISO8601 format) when they were first seen.
+        - name: min-last-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters detections by the earliest timestamp (in ISO8601 format) when they were last seen.
+        - name: max-last-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters detections by the latest timestamp (in ISO8601 format) when they were last seen.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ThreatDetection'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/threat-detections/{detection-id}:
+    get:
+      summary: Get a detection
+      description: |
+        A `GET` request sent to the endpoint root followed by a unique identifier returns detailed information about a specific Threat Detection. This endpoint provides access to comprehensive details such as the triggers (policy violations) and attributes related to the associated resource. To learn more about Threat Detections, refer to the [Detections Overview](/threats/detections/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - threats
+      operationId: getThreatDetection
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: detection-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this detection.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreatDetection'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+    patch:
+      summary: Update a detection
+      description: |
+        A `PATCH` request sent to the endpoint root followed by a unique identifier allows for updating specific fields of an existing Threat Detection. This endpoint facilitates the modification of attributes such the detection status. To modify a Threat Detection, provide the necessary changes in the request body. To learn more about Threat Detections, refer to the [Detections Overview](/threats/detections/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - threats
+      operationId: updateThreatDetection
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: detection-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this detection.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreatDetectionUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreatDetection'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/threat-policies:
+    get:
+      summary: List policies
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Threat Policy objects that are associated with the specified organization. To learn more about Threat Policies, refer to the [Policies Overview](/threats/policies/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - threats
+      operationId: listThreatPolicies
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: managed-by
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters the policy list to include only policies managed by the specified entity.
+          enum:
+            - UPWIND
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ThreatPolicy'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/threat-policies/{policy-id}:
+    patch:
+      summary: Update a policy
+      description: |
+        A `PATCH` request sent to the endpoint root followed by a unique identifier allows for updating specific fields of an existing Threat Policy. This endpoint facilitates the modification of attributes such the enablement status. To modify a Threat Policy, provide the necessary changes in the request body. To learn more about Threat Policies, refer to the [Policies Overview](/threats/policies/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - threats
+      operationId: updateThreatPolicy
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: policy-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this policy.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThreatPolicyUpdateRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreatPolicy'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/vulnerability-findings:
+    get:
+      summary: List findings
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Vulnerability finding objects that are associated with the specified organization. To learn more about Vulnerabilities, refer to the [Vulnerabilities Overview](/vulnerabilities/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - vulnerabilities
+      operationId: listVulnerabilityFindings
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: per-page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 100
+          description: Specifies how many results are returned on a page.
+        - name: page-token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Specifies the token for fetching subsequent pages in a paginated result set. Use the token from a previous response to continue retrieving data when the number of results exceeds the current page size.
+        - name: Link
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Provides pagination links for navigating through the result set, formatted as HTTP link headers.
+        - name: cloud-account-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified cloud account ID.
+        - name: cluster-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified cluster ID.
+        - name: namespace
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified namespace.
+        - name: ingress-active-communication
+          in: query
+          required: false
+          schema:
+            type: boolean
+            enum:
+              - "true"
+              - "false"
+          description: Filters findings for resources with active internet ingress communication.
+        - name: internet-exposure
+          in: query
+          required: false
+          schema:
+            type: boolean
+            enum:
+              - "true"
+              - "false"
+          description: Filters findings for resources with internet exposure.
+        - name: in-use
+          in: query
+          required: false
+          schema:
+            type: boolean
+            enum:
+              - "true"
+              - "false"
+          description: Filters findings for packages currently in use.
+        - name: exploitable
+          in: query
+          required: false
+          schema:
+            type: boolean
+            enum:
+              - "true"
+              - "false"
+          description: Filters findings for packages with a known exploit.
+        - name: fix-available
+          in: query
+          required: false
+          schema:
+            type: boolean
+            enum:
+              - "true"
+              - "false"
+          description: Filters findings for packages with an available fix.
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - LOW
+              - MEDIUM
+              - HIGH
+              - CRITICAL
+          description: Filters findings by the specified severity level.
+        - name: image-name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified image name. For example, `nginx:latest` or `myapp:1.2`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VulnerabilityFinding'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/vulnerability-findings/{finding-id}:
+    get:
+      summary: Get a finding
+      description: |
+        A `GET` request sent to the endpoint root followed by a unique identifier returns detailed information about a specific Vulnerability finding. This endpoint gives access to comprehensive details such as the CVE ID (Common Vulnerabilities and Exposures Identifier), the affected resource, severity, status, and runtime contextual information. To learn more about Vulnerabilities, refer to the [Vulnerabilities Overview](/vulnerabilities/overview) page.
+      schemes:
+        - https
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      tags:
+        - vulnerabilities
+      operationId: getVulnerabilityFinding
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: finding-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this finding.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VulnerabilityFinding'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/sbom-packages:
+    get:
+      summary: List SBOM packages
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Software Bill of Materials (SBOM) packages associated with the specified organization. This endpoint provides comprehensive details about packages including their vulnerabilities, affected resources, and usage statistics. The results can be filtered by various criteria including package name, version, framework, and more. To learn more about SBOM packages, refer to the [SBOM Explorer](/vulnerabilities/sbom-explorer/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - packages
+      operationId: listSbomPackages
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: cloud-account-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters packages by the specified cloud account ID.
+        - name: framework
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters packages by the specified framework.
+        - name: image-name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters packages by the specified image name.
+        - name: package-name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters packages by the specified package name.
+        - name: package-manager
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters packages by the specified package manager.
+        - name: package-license
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters packages by the specified package license.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SbomPackage'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/sbom-packages/{package-name}/{version}:
+    get:
+      summary: Get SBOM package details
+      description: |
+        A `GET` request sent to the endpoint root followed by package name and version returns detailed information about a specific SBOM package. This endpoint provides comprehensive details about the package including vulnerabilities, affected resources, images, and usage statistics. To learn more about SBOM packages, refer to the [SBOM Explorer](/vulnerabilities/sbom-explorer/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - packages
+      operationId: getSbomPackageDetails
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: package-name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the package to retrieve details for.
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The version of the package to retrieve details for.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SbomPackageDetails'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/cloud-accounts:
+    post:
+      summary: Create a cloud account
+      description: |
+        A `POST` request sent to the endpoint root creates a Cloud Account object that is associated with the specified organization. This endpoint allows you to add new cloud accounts to your organization for monitoring and security analysis. To learn more about Cloud Accounts, refer to the [Connect Cloud Account Overview](/getting-started/connect-cloud-account/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      tags:
+        - cloud-accounts
+      operationId: createCloudAccount
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCloudAccountRequest'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCloudAccountResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+        "500":
+          description: Internal Server Error
+  /v1/organizations/{organization-id}/cloud-accounts/{account-id}:
+    patch:
+      summary: Update a cloud account
+      description: |
+        A `PATCH` request sent to the endpoint updates an existing Cloud Account object that is associated with the specified organization. This endpoint allows you to modify the configuration of an existing cloud account. To learn more about Cloud Accounts, refer to the [Connect Cloud Account Overview](/getting-started/connect-cloud-account/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      tags:
+        - cloud-accounts
+      operationId: updateCloudAccount
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: account-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the cloud account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCloudAccountRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+        "500":
+          description: Internal Server Error
+    delete:
+      summary: Delete a cloud account
+      description: |
+        A `DELETE` request sent to the endpoint removes a Cloud Account object that is associated with the specified organization. This action permanently removes the cloud account and all associated data. To learn more about Cloud Accounts, refer to the [Connect Cloud Account Overview](/getting-started/connect-cloud-account/overview) page.
+      schemes:
+        - https
+      tags:
+        - cloud-accounts
+      operationId: deleteCloudAccount
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: account-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the cloud account.
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+        "500":
+          description: Internal Server Error
+  /v1/organizations/{organization-id}/configuration-findings:
+    get:
+      summary: List findings
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Configuration Finding objects that are associated with the specified organization. This endpoint allows you to search and filter configuration findings based on various criteria such as status, severity, resource name, and framework. By default, only findings with `FAIL` status are returned unless otherwise specified. To learn more about Configurations, refer to the [Configurations Overview](/posture/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: listConfigurationFindings
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: min-last-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the earliest timestamp (in ISO8601 format) when they were last seen.
+        - name: max-last-seen-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the latest timestamp (in ISO8601 format) when they were last seen.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - PASS
+              - FAIL
+              - ALL
+          description: Filters findings by their status. Defaults to `FAIL` when not specified.
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - LOW
+              - MEDIUM
+              - HIGH
+              - CRITICAL
+          description: Filters findings by their severity level.
+        - name: resource-name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified resource name.
+        - name: check-title
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified check title.
+        - name: check-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified check ID.
+        - name: framework-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified framework ID.
+        - name: framework-title
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters findings by the specified framework title.
+        - name: cloud-account-tags
+          in: query
+          required: false
+          style: simple
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filters findings by the specified cloud account tags. Use `key=value` format with multiple tags separated by commas. Currently supported for Amazon Web Services (AWS) accounts only.
+          example: "environment=production,project=webapp"
+        - name: include-cloud-account-tags
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Specifies whether to include cloud account tags in the response.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConfigurationFinding'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/configuration-findings/{finding-id}:
+    get:
+      summary: Get a finding
+      description: |
+        A `GET` request sent to the endpoint root followed by a unique identifier returns detailed information about a specific Configuration Finding. This endpoint provides access to comprehensive details such as the status, severity, framework information, and the associated resource. To learn more about Configuration Findings, refer to the [Configurations Overview](/posture/overview) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: getConfigurationFinding
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: finding-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this configuration finding.
+        - name: include-cloud-account-tags
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Specifies whether to include cloud account tags in the response.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigurationFinding'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/configuration-rules:
+    get:
+      summary: List rules
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Configuration Rule objects that are associated with the specified organization. This endpoint allows you to search and filter configuration rules based on various criteria such as framework, name, and findings status. To learn more about Configurations, refer to the [Configuration Rules](/posture/custom-configuration-rules) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: listConfigurationRules
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: framework
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters rules by the specified framework.
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters rules by the specified rule name.
+        - name: has-findings
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filters rules by whether they have associated findings.
+        - name: min-create-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters rules by the earliest creation timestamp (in ISO8601 format).
+        - name: max-create-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters rules by the latest creation timestamp (in ISO8601 format).
+        - name: min-update-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters rules by the earliest update timestamp (in ISO8601 format).
+        - name: max-update-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters rules by the latest update timestamp (in ISO8601 format).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConfigurationRule'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+    post:
+      summary: Create a rule
+      description: |
+        A `POST` request sent to this endpoint creates a Configuration Rule object that is associated with the specified organization. Configuration rules define custom compliance checks using Rego policy language to evaluate your cloud resources against security and governance requirements. To learn more about Configuration Rules, refer to the [Configuration Rules](/posture/custom-configuration-rules) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: createConfigurationRuleRequest
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConfigurationRuleRequest'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateConfigurationRuleResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+        "500":
+          description: Internal Server Error
+  /v1/organizations/{organization-id}/configuration-rules/{rule-id}:
+    patch:
+      summary: Update a rule
+      description: |
+        A `PATCH` request sent to the endpoint allows you to update an existing Configuration Rule object that is associated with the specified organization. You can modify properties such as name, category, severity, and Rego policy. To learn more about Configuration Rules, refer to the [Configuration Rules](/posture/custom-configuration-rules) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: editConfigurationRule
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: rule-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the configuration rule.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConfigurationRuleRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateConfigurationRuleResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+    delete:
+      summary: Delete a rule
+      description: |
+        A `DELETE` request sent to the endpoint deletes a Configuration Rule object that is associated with the specified organization. This action permanently removes the rule and cannot be undone. To learn more about Configuration Rules, refer to the [Configuration Rules](/posture/custom-configuration-rules) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: deleteConfigurationRule
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: rule-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the configuration rule.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/configuration-frameworks:
+    get:
+      summary: List frameworks
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Configuration Framework objects that are associated with the specified organization. This endpoint allows you to search and filter configuration frameworks based on various criteria such as framework IDs, cloud providers, and status. To learn more about Frameworks, refer to the [Frameworks](/posture/frameworks) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: listConfigurationFrameworks
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 1
+          description: Specifies the page number for pagination.
+        - name: per-page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 100
+          description: Specifies how many results are returned on a page.
+        - name: framework-ids
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filters frameworks by the specified framework IDs.
+        - name: cloud-providers
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filters frameworks by the specified cloud providers.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ENABLED
+              - DISABLED
+          description: Filters frameworks by their status.
+        - name: min-create-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters frameworks by the earliest creation timestamp (in ISO8601 format).
+        - name: max-create-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters frameworks by the latest creation timestamp (in ISO8601 format).
+        - name: min-update-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters frameworks by the earliest update timestamp (in ISO8601 format).
+        - name: max-update-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters frameworks by the latest update timestamp (in ISO8601 format).
+        - name: min-last-scan-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters frameworks by the earliest last scan timestamp (in ISO8601 format).
+        - name: max-last-scan-time
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters frameworks by the latest last scan timestamp (in ISO8601 format).
+        - name: min-score-value
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          description: Filters frameworks by the minimum score value.
+        - name: max-score-value
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          description: Filters frameworks by the maximum score value.
+        - name: types
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: Filters frameworks by the specified types.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConfigurationFramework'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+    post:
+      summary: Create a framework
+      description: |
+        A `POST` request sent to this endpoint creates a Configuration Framework object that is associated with the specified organization. Configuration frameworks define compliance standards and governance requirements for your cloud resources. To learn more about Frameworks, refer to the [Frameworks](/posture/frameworks) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: createConfigurationFramework
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConfigurationFrameworkRequest'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateConfigurationFrameworkResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+        "500":
+          description: Internal Server Error
+  /v1/organizations/{organization-id}/configuration-frameworks/{framework-id}:
+    patch:
+      summary: Update a framework
+      description: |
+        A `PATCH` request sent to the endpoint allows you to update an existing Configuration Framework object that is associated with the specified organization. You can modify properties such as title, description, and status. To learn more about Frameworks, refer to the [Frameworks](/posture/frameworks) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - configurations
+      operationId: updateConfigurationFramework
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: framework-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the configuration framework.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConfigurationFrameworkRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigurationFramework'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+        "500":
+          description: Internal Server Error
+  /v1/organizations/{organization-id}/workflows:
+    get:
+      summary: List workflows
+      description: |
+        A `GET` request sent to the endpoint root returns a list of Workflow objects that are associated with the specified organization. Workflows provide automation capabilities for responding to security events, vulnerabilities, and configuration findings. To learn more about Workflows, refer to the [Workflows](/settings/workflows) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - workflows
+      operationId: listWorkflows
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workflow'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+    post:
+      summary: Create a workflow
+      description: |
+        A `POST` request sent to the endpoint root creates a Workflow object that is associated with the specified organization. Workflows provide automation capabilities for responding to security events, vulnerabilities, and configuration findings. To learn more about Workflows, refer to the [Workflows](/settings/workflows) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - workflows
+      operationId: createWorkflow
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/workflows/{workflow-id}:
+    get:
+      summary: Get a workflow
+      description: |
+        A `GET` request sent to the endpoint root followed by a unique identifier returns detailed information about a specific Workflow. This endpoint provides access to comprehensive details such as triggers, actions, and selectors configured for the workflow. To learn more about Workflows, refer to the [Workflows](/settings/workflows) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - workflows
+      operationId: getWorkflow
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: workflow-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this workflow.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+    patch:
+      summary: Update a workflow
+      description: |
+        A `PATCH` request sent to the endpoint root followed by a unique identifier allows for updating specific fields of an existing Workflow. This endpoint facilitates the modification of attributes such as the workflow name, status, and configuration. To learn more about Workflows, refer to the [Workflows](/settings/workflows) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - workflows
+      operationId: updateWorkflow
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: workflow-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this workflow.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+    delete:
+      summary: Delete a workflow
+      description: |
+        A `DELETE` request sent to the endpoint root followed by a unique identifier deletes a specific Workflow. This action permanently removes the workflow and cannot be undone. To learn more about Workflows, refer to the [Workflows](/settings/workflows) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - workflows
+      operationId: deleteWorkflow
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: workflow-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this workflow.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/integration-webhooks:
+    get:
+      summary: List webhooks
+      description: |
+        A `GET` request sent to the endpoint root returns a list of integration webhook objects that are associated with the specified organization. Integration Webhooks enable you to send notifications and data to external systems when specific events occur. To learn more about integration webhooks, refer to the [Custom Webhook](/integrations/monitoring-and-logging/custom-webhook) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - integrations
+      operationId: listIntegrationWebhooks
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: vendor
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - DATADOG
+              - PAGERDUTY
+              - SPLUNK
+              - MSTEAMS
+              - TINES
+              - CUSTOM
+          description: Filters integration webhooks by vendor type.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntegrationWebhook'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+    post:
+      summary: Create a webhook
+      description: |
+        A `POST` request sent to the endpoint root creates a integration webhook object that is associated with the specified organization. Integration Webhooks enable you to send notifications and data to external systems when specific events occur. To learn more about integration webhooks, refer to the [Custom Webhook](/integrations/monitoring-and-logging/custom-webhook) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - integrations
+      operationId: createIntegrationWebhook
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIntegrationWebhookRequest'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationWebhook'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/integration-webhooks/{webhook-id}:
+    patch:
+      summary: Update a webhook
+      description: |
+        A `PATCH` request sent to the endpoint root followed by a unique identifier allows for updating specific fields of an existing integration webhook. This endpoint facilitates the modification of attributes such as the name, status, and configuration. To learn more about integration webhooks, refer to the [Custom Webhook](/integrations/monitoring-and-logging/custom-webhook) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - integrations
+      operationId: updateIntegrationWebhook
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: webhook-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this integration webhook.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIntegrationWebhookRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationWebhook'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+    delete:
+      summary: Delete a webhook
+      description: |
+        A `DELETE` request sent to the endpoint root followed by a unique identifier deletes a specific integration webhook. This action permanently removes the integration webhook and cannot be undone. To learn more about integration webhooks, refer to the [Custom Webhook](/integrations/monitoring-and-logging/custom-webhook) page.
+      schemes:
+        - https
+      produces:
+        - application/json
+      tags:
+        - integrations
+      operationId: deleteIntegrationWebhook
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: webhook-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this integration webhook.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+  /v1/organizations/{organization-id}/apisecurity-endpoints:
+    get:
+      tags:
+        - api-security
+      summary: List endpoints
+      description: |
+        A `GET` request sent to the endpoint root returns a list of API Endpoint objects that are associated with the specified organization. To learn more about API Security, refer to the [API Security Overview](/api-security/overview) page.
+      operationId: listApiEndpoints
+      parameters:
+        - name: organization-id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the organization.
+        - name: per-page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 100
+          description: Specifies how many results are returned on a page.
+        - name: page-token
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Token for pagination to retrieve the next page of results.
+        - name: method
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by HTTP method (GET, POST, PUT, DELETE, etc.).
+        - name: authentication-state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - AUTHENTICATED
+              - UNAUTHENTICATED
+              - UNKNOWN
+          description: Filters endpoints by authentication state. Multiple values may be provided, separated by commas.
+        - name: has-internet-ingress
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filters endpoints that have internet ingress exposure.
+        - name: has-vulnerability
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filters endpoints that have associated vulnerabilities.
+        - name: has-sensitive-data
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filters endpoints that handle sensitive data.
+        - name: cloud-account-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by the specified cloud account ID.
+        - name: cloud-provider
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by cloud provider (AWS, Azure, GCP, etc.).
+        - name: resource-type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by resource type.
+        - name: cloud-organization-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by cloud organization ID.
+        - name: cloud-organization-unit-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by cloud organization unit ID.
+        - name: domain
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by domain name.
+        - name: cluster-id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by cluster ID.
+        - name: namespace
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filters endpoints by Kubernetes namespace.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiEndpoint'
+        "206":
+          description: Partial Content
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiEndpoint'
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "429":
+          description: Rate Limit Exceeded
+        "500":
+          description: Internal server error
+components:
+  schemas:
+    ThreatPolicy:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this policy.
+        display_name:
+          type: string
+          description: The display name for this policy.
+        category:
+          type: string
+          description: The category of this policy.
+          enum:
+            - PROCESS_EXECUTION
+        severity:
+          type: string
+          description: The severity level of a threat as assessed by this policy.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        scope:
+          type: string
+          description: Specifies whether the policy applies to all resources or a subset.
+          enum:
+            - ALL_RESOURCES
+            - SUBSET
+        open_issues:
+          type: integer
+          format: int32
+          description: The number of open issues associated with this policy.
+        managed_by:
+          type: string
+          description: The entity responsible for managing this policy.
+          enum:
+            - UPWIND
+        enabled:
+          type: boolean
+          description: Indicates whether this policy is currently enabled.
+    ThreatPolicyUpdateRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Indicates whether this policy should be enabled.
+    CloudAccountConfig:
+      type: object
+      description: Base cloud account configuration. The actual configuration type is determined by the `provider` property.
+      oneOf:
+        - $ref: '#/components/schemas/CloudAccountConfigBYOC'
+    CloudAccountConfigBYOC:
+      type: object
+      title: BYOC
+      properties:
+        infrastructure_types:
+          type: array
+          items:
+            type: string
+            enum:
+              - VMWARE
+              - HYPERV
+              - OPENSTACK
+              - BARE_METAL
+          description: List of infrastructure types supported by the cloud account.
+        location:
+          type: string
+          description: The geographic location or region of the cloud account.
+          example: "us-east-1"
+    CreateCloudAccountRequest:
+      type: object
+      required:
+        - name
+        - provider
+        - config
+      properties:
+        name:
+          type: string
+          description: The display name for the cloud account.
+          example: "Production"
+        provider:
+          type: string
+          enum:
+            - BYOC
+          description: The cloud provider type.
+        config:
+          $ref: '#/components/schemas/CloudAccountConfig'
+          description: Configuration details for the cloud account.
+    CreateCloudAccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the cloud account.
+          example: "ca_123456789"
+        account_id:
+          type: string
+          description: The cloud provider account identifier.
+          example: "123456789012"
+        name:
+          type: string
+          description: The display name for the cloud account.
+          example: "Production"
+        provider:
+          type: string
+          enum:
+            - BYOC
+          description: The cloud provider type.
+        config:
+          $ref: '#/components/schemas/CloudAccountConfig'
+          description: Configuration details for the cloud account.
+    UpdateCloudAccountRequest:
+      type: object
+      properties:
+        config:
+          $ref: '#/components/schemas/CloudAccountConfig'
+          description: Updated configuration details for the cloud account.
+    ThreatDetection:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this detection.
+        type:
+          type: string
+          description: The type of detection.
+        category:
+          type: string
+          description: The category of this detection.
+          enum:
+            - NETWORK
+            - PROCESS
+            - CLOUD_LOGS
+        severity:
+          type: string
+          description: The severity level of this detection.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        status:
+          type: string
+          description: The status of this detection.
+          enum:
+            - PENDING
+            - OPEN
+            - ARCHIVED
+        title:
+          type: string
+          description: The title of this detection.
+        description:
+          type: string
+          description: A detailed description of this detection.
+        first_seen_time:
+          type: string
+          description: The timestamp when this detection was first seen.
+        last_seen_time:
+          type: string
+          description: The timestamp when this detection was last seen.
+        occurrence_count:
+          type: integer
+          format: int32
+          description: The count of occurrences for this detection.
+        resource:
+          $ref: '#/components/schemas/Resource'
+          description: The resource associated with this detection.
+        mitre_attacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/MitreAttackDetails'
+          description: The MITRE ATT&CK framework information related to this detection.
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreatDetectionTrigger'
+          description: List of triggers associated with this detection. Each trigger indicates a policy violation that caused this detection. It comprises the policy identifier and a list of events related to the violation.
+    ThreatDetectionEvent:
+      required:
+        - type
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the event summary.
+        event_type:
+          type: string
+          description: The type of the event.
+          enum:
+            - AUDIT_LOG_EVENT
+            - NETWORK_ACTIVITY
+            - PROCESS_EXECUTION
+        description:
+          type: string
+          description: A description of the event.
+        event_time:
+          type: string
+          description: The time of the event.
+        data:
+          type: object
+          description: The data of the event.
+    ThreatDetectionTrigger:
+      type: object
+      properties:
+        policy_id:
+          type: string
+          description: The unique identifier for the policy.
+        policy_name:
+          type: string
+          description: The name of the policy.
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreatDetectionEvent'
+          description: List of event summaries.
+    ThreatDetectionUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          description: The status of this detection.
+          enum:
+            - ARCHIVED
+    ThreatEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this event.
+        type:
+          type: string
+          description: The specific type identifier for this event.
+        severity:
+          type: string
+          description: The severity level of this event.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        category:
+          type: string
+          description: The category of this event.
+          enum:
+            - NETWORK
+            - PROCESS
+            - FILE_SYSTEM
+            - EXCESSIVE_PRIVILEGE
+            - CLOUD_LOGS
+            - CLOUD_ACTIVITY_LOGS
+            - FILE_EVENTS
+            - FILES
+            - CLOUD_TRAIL
+            - SYSCALL_EVENT
+            - API_SECURITY
+            - NETWORK_BASELINE
+        status:
+          type: string
+          description: The current status of this event.
+          enum:
+            - PENDING
+            - OPEN
+            - ARCHIVED
+        title:
+          type: string
+          description: The title of this event.
+        first_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this event was first seen.
+        last_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this event was last seen.
+        resource:
+          type: object
+          description: The resource associated with this event.
+          properties:
+            id:
+              type: string
+              description: The unique identifier for this resource.
+            name:
+              type: string
+              description: The name of this resource.
+            region:
+              type: string
+              description: The region where this resource is located.
+            cloud-account_id:
+              type: string
+              description: The cloud account ID associated with this event.
+            cloud_provider:
+              type: string
+              description: The cloud provider of this resource.
+              enum:
+                - AWS
+                - GCP
+                - AZURE
+                - BYOC
+            risk_category:
+              type: string
+              description: Risk category indicators for this event.
+    VulnerabilityFinding:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this finding.
+        status:
+          type: string
+          description: The status of this finding.
+          enum:
+            - OPEN
+            - ARCHIVED
+        source:
+          type: string
+          description: The source of this finding.
+          enum:
+            - SENSOR
+            - CLOUD_SCANNER
+        first_seen_time:
+          type: string
+          description: The timestamp when this finding was first seen.
+        last_scan_time:
+          type: string
+          description: The timestamp when this finding was last scanned.
+        vulnerability:
+          $ref: '#/components/schemas/Vulnerability'
+          description: The information on the Common Vulnerabilities and Exposures (CVE) identified by this finding.
+        image:
+          $ref: '#/components/schemas/Image'
+          description: The information on the vulnerable image identified by this finding.
+        package:
+          $ref: '#/components/schemas/Package'
+          description: The information on the vulnerable package identified by this finding.
+        resource:
+          $ref: '#/components/schemas/Resource'
+          description: The information on the vulnerable resource identified by this finding.
+        remediation:
+          type: array
+          items:
+            $ref: '#/components/schemas/RemediationItem'
+    Resource:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this resource.
+        external_id:
+          type: string
+          description: The external unique identifier for this resource.
+        name:
+          type: string
+          description: The name of this resource.
+        type:
+          type: string
+          description: The type of this resource.
+        path:
+          type: string
+          description: The path of this resource.
+        cloud_provider:
+          type: string
+          description: The cloud provider of this resource.
+          enum:
+            - AWS
+            - GCP
+            - AZURE
+        cloud_account_id:
+          type: string
+          description: The unique identifier for the cloud account associated with this resource.
+        cloud_account_name:
+          type: string
+          description: The name of the cloud account associated with this resource.
+        cloud_account_tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+          description: List of tags associated with the cloud account the resource belongs to.
+        region:
+          type: string
+          description: The region where this resource is located.
+        cluster_id:
+          type: string
+          description: The unique identifier for the cluster associated with this resource.
+        namespace:
+          type: string
+          description: The namespace of this resource.
+        internet_exposure:
+          "$ref": "#/components/schemas/InternetExposure"
+          description: The information about the internet-facing communication activities of this resource, detailing both incoming and outgoing traffic.
+        risk_categories:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+          description: List of risk categories associated with this resource.
+    Image:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of this image.
+        digest:
+          type: string
+          description: The sha256 digest of the image manifest.
+        uri:
+          type: string
+          description: The URI of this image.
+        registry:
+          type: string
+          description: The registry to which this image belongs.
+        repository:
+          type: string
+          description: The repository to which this image belongs.
+        os_version:
+          type: string
+          description: The version of the operating system associated with this image.
+        os_name:
+          type: string
+          description: The name of the operating system associated with this image.
+        tag:
+          type: string
+          description: The tag associated with this image.
+    Package:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of this package.
+        framework:
+          type: string
+          description: The framework associated with this package.
+        type:
+          type: string
+          description: The type of this package.
+        version:
+          type: string
+          description: The version of this package.
+        in_use:
+          type: boolean
+          description: An indicator signaling if this package is currently being utilized by the resource.
+    Vulnerability:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The identification name assigned to this vulnerability by Upwind.
+        description:
+          type: string
+          description: The brief description assigned to this vulnerability by Upwind.
+        exploitable:
+          type: boolean
+          description: An indicator signaling if this vulnerability has a known exploit.
+        nvd_cve_id:
+          type: string
+          description: The Common Vulnerabilities and Exposures (CVE) unique identifier for this vulnerability.
+        nvd_description:
+          type: string
+          description: The comprehensive vulnerability description provided by the National Vulnerability Database (NVD).
+        nvd_publish_time:
+          type: string
+          format: date-time
+          description: The timestamp when this vulnerability was published.
+        cve_first_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this CVE was first seen.
+        nvd_cvss_v2_severity:
+          type: string
+          description: The severity level of this vulnerability using the National Vulnerability Database's (NVD) Common Vulnerability Scoring System version 2 (CVSS v2).
+        nvd_cvss_v2_score:
+          type: string
+          description: The score of this vulnerability using the National Vulnerability Database's (NVD) Common Vulnerability Scoring System version 2 (CVSS v2).
+        nvd_cvss_v3_severity:
+          type: string
+          description: The severity level of this vulnerability using the National Vulnerability Database's (NVD) Common Vulnerability Scoring System version 3 (CVSS v3).
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        nvd_cvss_v3_score:
+          type: string
+          description: The score of this vulnerability using the National Vulnerability Database's (NVD) Common Vulnerability Scoring System version 3 (CVSS v3). Scores range from 0.0 to 10.0, with higher values indicating higher severity.
+        nvd_cvss_v4_severity:
+          type: string
+          description: The severity level of this vulnerability using the National Vulnerability Database's (NVD) Common Vulnerability Scoring System version 4 (CVSS v4).
+        nvd_cvss_v4_score:
+          type: string
+          description: The score of this vulnerability using the National Vulnerability Database's (NVD) Common Vulnerability Scoring System version 4 (CVSS v4).
+        sbom_artifact_locations:
+          type: array
+          items:
+            type: string
+          description: List of SBOM artifact locations where this vulnerability is found.
+        impact_metrics:
+          $ref: '#/components/schemas/ImpactMetrics'
+          description: The impact metrics for this vulnerability.
+    InternetExposure:
+      type: object
+      properties:
+        ingress:
+          $ref: '#/components/schemas/InternetExposureDetails'
+          description: The information about incoming internet-facing communication activities of the resource.
+    InternetExposureDetails:
+      type: object
+      properties:
+        active_communication:
+          type: boolean
+          description: An indicator signaling whether there is active incoming communication from the internet to the resource.
+    ImpactMetrics:
+      type: object
+      properties:
+        affected_resource_count:
+          type: integer
+          format: int32
+          description: The number of resources affected by this vulnerability.
+        affected_image_count:
+          type: integer
+          format: int32
+          description: The number of images affected by this vulnerability.
+    MitreAttackDetails:
+      type: object
+      properties:
+        tactic_id:
+          type: string
+          description: The unique identifier for the tactic.
+        tactic_name:
+          type: string
+          description: The name of the tactic.
+        technique_id:
+          type: string
+          description: The unique identifier for the technique.
+        technique_name:
+          type: string
+          description: The name of the technique.
+    SecurityControl:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this security control.
+        title:
+          type: string
+          description: The title of this security control.
+        description:
+          type: string
+          description: The description of this security control.
+        category:
+          type: string
+          description: The category of this security control.
+        framework:
+          type: string
+          description: The framework associated with this security control.
+        standards:
+          type: array
+          items:
+            type: string
+          description: The security standards or configuration requirements associated with this security control.
+    RemediationItem:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of the remediation strategy.
+          enum:
+            - OFFICIAL_FIX
+        data:
+          type: string
+          description: The data of the remediation strategy.
+    EventList:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the event
+        type:
+          type: string
+          description: The type of event.
+        reporter:
+          type: string
+          description: The entity creating the event.
+        data:
+          oneOf:
+            - "$ref": "#/components/schemas/CiEventData"
+            - "$ref": "#/components/schemas/CdEventData"
+    CreateEventRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of event.
+          enum:
+            - IMAGE_BUILD
+            - IMAGE_DEPLOY
+        reporter:
+          type: string
+          description: The entity creating the event.
+          enum:
+            - GITHUB_ACTIONS
+            - CIRCLE_CI
+            - CUSTOM_CI
+            - CUSTOM_CD
+        data:
+          oneOf:
+            - "$ref": "#/components/schemas/CiEventData"
+            - "$ref": "#/components/schemas/CdEventData"
+    CiEventData:
+      type: object
+      properties:
+        image:
+          type: string
+          description: The name of the image involved in the event.
+        image_sha:
+          type: string
+          description: The SHA of the image involved in the event.
+        commit_sha:
+          type: string
+          description: The SHA of the commit involved in the event.
+        version_control_platform:
+          type: string
+          description: The name of the version control platform.
+          enum:
+            - GITHUB
+            - GITLAB
+            - BITBUCKET
+        repository:
+          type: string
+          description: The name of the repository involved in the event.
+        branch:
+          type: string
+          description: The name of the branch involved in the event.
+        pull_request_ids:
+          type: array
+          description: The identifiers of the Pull Requests involved in the event.
+          items:
+            type: integer
+        build_time:
+          type: string
+          format: date-time
+          description: Build time in date-time notation as defined by RFC 3339, section 5.6, for example, 2022-08-22T17:32:28Z
+    CdEventData:
+      type: object
+      properties:
+        resource_name:
+          type: string
+          description: The name of the resource involved in the event.
+        resource_namespace:
+          type: string
+          description: The namespace of the resource involved in the event.
+        resource_kind:
+          type: string
+          description: The kind of the resource involved in the event.
+        cluster_id:
+          type: string
+          description: The unique identifier for the cluster associated with the resource involved in the event.
+        start_time:
+          type: string
+          format: date-time
+          description: Start time in date-time notation as defined by RFC 3339, section 5.6, for example, 2022-08-22T17:32:28Z
+        end_time:
+          type: string
+          format: date-time
+          description: End time in date-time notation as defined by RFC 3339, section 5.6, for example, 2022-08-22T17:32:28Z
+        initiator:
+          type: string
+          description: The initiator of the event.
+    SbomPackage:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the package.
+        version:
+          type: string
+          description: The version of the package.
+        package_manager:
+          type: string
+          description: The package manager associated with this package.
+        framework:
+          type: string
+          description: The framework associated with this package.
+        licenses:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+          description: The licenses associated with this package.
+        vulnerabilities_summary:
+          $ref: '#/components/schemas/VulnerabilitiesSummary'
+          description: Summary of vulnerabilities found in this package.
+        resources_summary:
+          $ref: '#/components/schemas/ResourcesSummary'
+          description: Summary of resources associated with this package.
+        images_summary:
+          $ref: '#/components/schemas/ImagesSummary'
+          description: Summary of images associated with this package.
+    SbomPackageDetails:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the package.
+        version:
+          type: string
+          description: The version of the package.
+        package_manager:
+          type: string
+          description: The package manager associated with this package.
+        framework:
+          type: string
+          description: The framework associated with this package.
+        licenses:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+          description: The licenses associated with this package.
+        vulnerabilities_summary:
+          $ref: '#/components/schemas/VulnerabilitiesSummary'
+          description: Summary of vulnerabilities found in this package.
+        resources_summary:
+          $ref: '#/components/schemas/ResourcesSummary'
+          description: Summary of resources associated with this package.
+        images_summary:
+          $ref: '#/components/schemas/ImagesSummary'
+          description: Summary of images associated with this package.
+        vulnerabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageDetailsVulnerability'
+          description: Detailed list of vulnerabilities found in this package.
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageDetailsResource'
+          description: List of resources using this package.
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageDetailsImage'
+          description: List of images containing this package.
+    PackageDetailsVulnerability:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The unique identifier for this vulnerability.
+        description:
+          type: string
+          description: The description of this vulnerability.
+        cve_id:
+          type: string
+          description: The Common Vulnerabilities and Exposures (CVE) unique identifier for this vulnerability.
+        cvss_v3_score:
+          type: string
+          description: The CVSS v3 score for this vulnerability.
+        cvss_v3_severity:
+          type: string
+          description: The CVSS v3 severity level for this vulnerability.
+        cvss_v2_score:
+          type: string
+          description: The CVSS v2 score for this vulnerability.
+        cvss_v2_severity:
+          type: string
+          description: The CVSS v2 severity level for this vulnerability.
+        cvss_v4_score:
+          type: string
+          description: The CVSS v4 score for this vulnerability.
+        cvss_v4_severity:
+          type: string
+          description: The CVSS v4 severity level for this vulnerability.
+        cve_first_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this CVE was first seen.
+        publish_time:
+          type: string
+          format: date-time
+          description: The timestamp when this vulnerability was published.
+        last_modification_time:
+          type: string
+          format: date-time
+          description: The timestamp when this vulnerability was last modified.
+        update_time:
+          type: string
+          format: date-time
+          description: The timestamp when this vulnerability information was last updated.
+        nist_severity:
+          type: string
+          description: The NIST severity level for this vulnerability.
+        fixed_in_version:
+          type: string
+          description: The version where this vulnerability is fixed.
+    VulnerabilitiesSummary:
+      type: object
+      properties:
+        critical_count:
+          type: integer
+          format: int32
+          description: The number of critical vulnerabilities.
+        high_count:
+          type: integer
+          format: int32
+          description: The number of high severity vulnerabilities.
+        medium_count:
+          type: integer
+          format: int32
+          description: The number of medium severity vulnerabilities.
+        low_count:
+          type: integer
+          format: int32
+          description: The number of low severity vulnerabilities.
+        unclassified_count:
+          type: integer
+          format: int32
+          description: The number of unclassified vulnerabilities.
+        total_count:
+          type: integer
+          format: int32
+          description: The total number of vulnerabilities.
+    PackageDetailsResource:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this resource.
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - UNKNOWN
+          description: The status of this resource.
+        region:
+          type: string
+          description: The region where this resource is located.
+        namespace:
+          type: string
+          description: The namespace of this resource.
+        cluster_id:
+          type: string
+          description: The unique identifier for the cluster associated with this resource.
+        cluster_name:
+          type: string
+          description: The name of the cluster associated with this resource.
+        name:
+          type: string
+          description: The name of this resource.
+        cloud_provider:
+          type: string
+          enum:
+            - AWS
+            - AZURE
+            - GCP
+            - BYOC
+          description: The cloud provider of this resource.
+        cloud_account_id:
+          type: string
+          description: The unique identifier for the cloud account associated with this resource.
+        type:
+          type: string
+          enum:
+            - AwsAutoScalingGroup
+            - AwsInstance
+            - AwsLambdaFunction
+            - AzureVirtualMachineScaleSet
+            - AzureVirtualMachine
+            - AzureFunctionApp
+            - GcpInstanceGroup
+            - GcpInstance
+            - CloudRunServiceContainer
+            - CloudRunServiceFunction
+            - CloudRunJob
+            - Deployment
+            - StatefulSet
+            - DaemonSet
+            - CronJob
+            - ReplicaSet
+            - StandAlone
+            - K8SCluster
+            - GpcGke
+            - AwsEks
+            - AzureAks
+            - K8SNode
+            - ECSService
+            - ECSStandaloneTask
+            - ECSWorkload
+            - ByocHost
+            - Host
+            - HostContainer
+            - Unknown
+          description: The type of this resource.
+        image_asset_ids:
+          type: array
+          items:
+            type: string
+          description: List of image asset IDs associated with this resource.
+        risk_overview:
+          $ref: '#/components/schemas/RiskOverview'
+          description: Risk overview for this resource.
+        vulnerabilities_summary:
+          $ref: '#/components/schemas/VulnerabilitiesSummary'
+          description: Summary of vulnerabilities found in this resource.
+    PackageDetailsImage:
+      type: object
+      properties:
+        registry:
+          type: string
+          description: The registry where this image is stored.
+        resource_id:
+          type: string
+          description: The unique identifier for the resource associated with this image.
+        name:
+          type: string
+          description: The name of this image.
+        version:
+          type: string
+          description: The version of this image.
+        uri:
+          type: string
+          description: The URI of this image.
+        digest:
+          type: string
+          description: The digest of this image.
+        scan_source:
+          type: string
+          description: The source of the image scan.
+    RiskOverview:
+      type: object
+      properties:
+        critical_vulnerabilities_count:
+          type: integer
+          format: int32
+          description: The number of critical vulnerabilities.
+        critical_detections_count:
+          type: integer
+          format: int32
+          description: The number of critical detections.
+        has_active_internet_ingress:
+          type: boolean
+          description: Indicates if there is active internet ingress communication.
+        has_active_internet_egress:
+          type: boolean
+          description: Indicates if there is active internet egress communication.
+        sensitive_data_tags:
+          type: array
+          items:
+            type: string
+          description: List of sensitive data tags associated with this endpoint.
+        sensitive_data_categories:
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+          description: List of sensitive data categories associated with this endpoint.
+    ResourcesSummary:
+      type: object
+      properties:
+        in_use_count:
+          type: integer
+          format: int32
+          description: The number of resources currently using this package.
+        total_count:
+          type: integer
+          format: int32
+          description: The total number of resources associated with this package.
+    ImagesSummary:
+      type: object
+      properties:
+        affected_count:
+          type: integer
+          format: int32
+          description: The number of images affected by this package.
+    ConfigurationFinding:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this finding.
+        status:
+          type: string
+          description: The status of this finding.
+          enum:
+            - PASS
+            - FAIL
+            - ALL
+        severity:
+          type: string
+          description: The severity level of this finding.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        title:
+          type: string
+          description: The title of this finding.
+        description:
+          type: string
+          description: The description of this finding.
+        first_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this finding was first seen.
+        last_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this finding was last seen.
+        last_sync_time:
+          type: string
+          format: date-time
+          description: The timestamp when this finding was last synchronized.
+        framework:
+          $ref: '#/components/schemas/ConfigurationFramework'
+          description: The configuration framework associated with this finding.
+        check:
+          $ref: '#/components/schemas/ConfigurationCheck'
+          description: The configuration check that generated this finding.
+        resource:
+          $ref: '#/components/schemas/Resource'
+          description: The resource associated with this finding.
+    ConfigurationFramework:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this configuration framework.
+        status:
+          type: string
+          enum:
+            - ENABLED
+            - DISABLED
+          description: The current status of the framework.
+        version:
+          type: string
+          description: The version of this configuration framework.
+        revision:
+          type: string
+          description: The revision of this configuration framework.
+        title:
+          type: string
+          description: The title of this configuration framework.
+        description:
+          type: string
+          description: A detailed description of the framework.
+        cloud_provider:
+          type: string
+          description: The cloud provider this framework is associated with.
+        create_time:
+          type: string
+          format: date-time
+          description: The timestamp when the framework was created.
+        update_time:
+          type: string
+          format: date-time
+          description: The timestamp when the framework was last updated.
+        last_scan_time:
+          type: string
+          format: date-time
+          description: The timestamp when the framework was last scanned.
+        type:
+          type: string
+          description: The type of framework.
+        compliance_status:
+          $ref: '#/components/schemas/ConfigurationFrameworkStatus'
+        rollout_state:
+          type: string
+          description: The rollout state of the framework.
+    ConfigurationFrameworkStatus:
+      type: object
+      properties:
+        score:
+          type: integer
+          format: int32
+          description: The compliance score for this framework.
+    ConfigurationCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this configuration check.
+        title:
+          type: string
+          description: The title of this configuration check.
+        description:
+          type: string
+          description: The description of this configuration check.
+        remediation:
+          type: string
+          description: The remediation guidance for this configuration check.
+    ConfigurationRule:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this configuration rule.
+        name:
+          type: string
+          description: The name of this configuration rule.
+        framework:
+          type: string
+          description: The framework associated with this configuration rule.
+        findings_count:
+          type: integer
+          format: int32
+          description: The number of findings associated with this configuration rule.
+        create_time:
+          type: string
+          format: date-time
+          description: The timestamp when this configuration rule was created.
+        update_time:
+          type: string
+          format: date-time
+          description: The timestamp when this configuration rule was last updated.
+    CreateConfigurationRuleRequest:
+      type: object
+      required:
+        - asset_kind
+        - name
+        - rego_policy
+      properties:
+        name:
+          type: string
+          description: Display name for the rule.
+          example: EnsureS3BucketsAreEncrypted
+        asset_kind:
+          type: string
+          description: Primary resource type to evaluate.
+          example: AWS_S3_BUCKET
+        related_asset_kinds:
+          type: array
+          description: Secondary asset kinds if the rule correlates multiple resources.
+          items:
+            type: string
+            description: Secondary asset kind if the rule correlates multiple resources.
+            example: AWS_S3_BUCKET_POLICY
+        rego_policy:
+          type: string
+          description: Rego policy logic used to evaluate the rule.
+          example: 'is_pass(input_item) := false { input_item.public_access == true } else := true'
+        description:
+          type: string
+          description: Short description of the rule.
+        framework_id:
+          type: string
+          description: If this rule is linked to a framework.
+        category:
+          type: string
+          description: Category for the rule.
+        severity:
+          type: string
+          description: Severity for the rule. Defaults to MEDIUM.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+          default: MEDIUM
+    CreateConfigurationRuleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this configuration rule.
+        name:
+          type: string
+          description: The name of this configuration rule.
+        description:
+          type: string
+          description: The description of this configuration rule.
+        category:
+          type: string
+          description: The category of this configuration rule.
+        risk_category:
+          type: string
+          description: The risk category of this configuration rule.
+        severity:
+          type: string
+          description: The severity level of this configuration rule.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        rego_policy:
+          type: string
+          description: The Rego policy logic for this configuration rule.
+        inventory_query:
+          type: object
+          description: The inventory query associated with this configuration rule.
+        frameworks:
+          type: array
+          description: The frameworks associated with this configuration rule.
+          items:
+            $ref: '#/components/schemas/ConfigurationFramework'
+        create_time:
+          type: string
+          format: date-time
+          description: The timestamp when this configuration rule was created.
+        update_time:
+          type: string
+          format: date-time
+          description: The timestamp when this configuration rule was last updated.
+    UpdateConfigurationRuleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Display name for the rule.
+        category:
+          type: string
+          description: Category for the rule.
+        severity:
+          type: string
+          description: Severity for the rule.
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        rego_policy:
+          type: string
+          maxLength: 50000
+          minLength: 0
+          description: Rego policy for the rule.
+        risk_category:
+          type: string
+          description: Risk category for the rule.
+        description:
+          type: string
+          description: Short description of the rule.
+        asset_kind:
+          type: string
+          description: Primary resource type to evaluate.
+    CreateConfigurationFrameworkRequest:
+      type: object
+      required:
+        - title
+        - cloud_provider
+      properties:
+        title:
+          type: string
+          description: The title of the framework.
+        description:
+          type: string
+          description: A detailed description of the framework.
+        cloud_provider:
+          type: string
+          enum:
+            - AWS
+            - AZURE
+            - GCP
+            - BYOC
+            - ALL
+            - KUBERNETES
+          description: The cloud provider this framework is associated with.
+    CreateConfigurationFrameworkResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the created framework.
+        status:
+          type: string
+          enum:
+            - ENABLED
+            - DISABLED
+          description: The current status of the framework.
+        version:
+          type: string
+          description: The version of the framework.
+        revision:
+          type: string
+          description: The revision of the framework.
+        title:
+          type: string
+          description: The title of the framework.
+        description:
+          type: string
+          description: A detailed description of the framework.
+        cloud_provider:
+          type: string
+          description: The cloud provider this framework is associated with.
+    UpdateConfigurationFrameworkRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The title of the framework.
+        description:
+          type: string
+          description: A detailed description of the framework.
+        status:
+          type: string
+          enum:
+            - ENABLED
+            - DISABLED
+          description: Framework scan status.
+    Tag:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The key of the tag.
+        value:
+          type: string
+          description: The value of the tag.
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this workflow.
+        name:
+          type: string
+          description: The name of this workflow.
+        type:
+          type: string
+          description: The type of this workflow.
+          enum:
+            - TRIGGERED
+            - SCHEDULED
+        status:
+          type: string
+          description: The current status of this workflow.
+          enum:
+            - ENABLED
+            - DISABLED
+        last_execution_time:
+          type: string
+          format: date-time
+          description: The timestamp when this workflow was last executed.
+        config:
+          $ref: '#/components/schemas/WorkflowConfig'
+          description: The configuration settings for this workflow.
+    WorkflowConfig:
+      type: object
+      properties:
+        selectors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowSelector'
+          description: List of selectors that filter resources for this workflow.
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowAction'
+          description: List of actions that are executed when this workflow is triggered.
+        trigger:
+          $ref: '#/components/schemas/WorkflowTrigger'
+          description: The trigger configuration for this workflow. Required when workflow type is `TRIGGERED`.
+      description: The configuration settings for a workflow, supporting both triggered and scheduled workflows.
+    WorkflowTrigger:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of trigger.
+          enum:
+            - EVENT
+            - CONFIGURATION_FINDING
+            - RUNTIME_EXPOSURE_CVE
+            - THREAT_DETECTION
+            - THREAT_STORY
+        severities:
+          type: array
+          items:
+            type: string
+            enum:
+              - LOW
+              - MEDIUM
+              - HIGH
+              - CRITICAL
+          description: List of severity levels that trigger the workflow.
+        categories:
+          type: array
+          items:
+            type: string
+          description: List of categories that trigger the workflow.
+    WorkflowAction:
+      type: object
+      description: Base workflow action. The actual action type is determined by the `type` property.
+      discriminator:
+        propertyName: type
+        mapping:
+          SLACK: '#/components/schemas/WorkflowActionSlack'
+          JIRA: '#/components/schemas/WorkflowActionJira'
+          EMAIL: '#/components/schemas/WorkflowActionEmail'
+          WEBHOOK: '#/components/schemas/WorkflowActionWebhook'
+      oneOf:
+        - $ref: '#/components/schemas/WorkflowActionSlack'
+        - $ref: '#/components/schemas/WorkflowActionJira'
+        - $ref: '#/components/schemas/WorkflowActionEmail'
+        - $ref: '#/components/schemas/WorkflowActionWebhook'
+    WorkflowSelector:
+      type: object
+      description: Base workflow selector. The concrete implementation is selected by the `type` property.
+      discriminator:
+        propertyName: type
+      oneOf:
+        - $ref: '#/components/schemas/WorkflowValuesSelector'
+        - $ref: '#/components/schemas/WorkflowKeyValuesSelector'
+    WorkflowValuesSelector:
+      type: object
+      title: Values Selector
+      properties:
+        type:
+          type: string
+          description: The type of selector.
+          enum:
+            - CLOUD_ACCOUNT
+            - CLOUD_PROVIDER
+            - CLUSTER
+            - CLUSTER_NAME
+            - HOST
+            - NAMESPACE
+            - RESOURCE_KIND
+            - RESOURCE_NAME
+            - VPC
+        values:
+          type: array
+          items:
+            type: string
+          description: List of values for this selector.
+    WorkflowKeyValuesSelector:
+      type: object
+      title: Key-Value Selector
+      properties:
+        type:
+          type: string
+          description: The type of selector.
+          enum:
+            - ENDPOINT_TAG
+            - LABEL
+            - TAG
+        key_values:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyValuePair'
+          description: List of key-value pairs for this selector.
+    KeyValuePair:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The key of the key-value pair.
+        value:
+          type: string
+          description: The value of the key-value pair.
+    WorkflowActionSlack:
+      type: object
+      title: Slack
+      properties:
+        type:
+          type: string
+          enum:
+            - SLACK
+          description: The action type.
+        channel:
+          type: string
+          description: The Slack channel for the action.
+        message:
+          type: string
+          description: The message content for the action.
+    WorkflowActionJira:
+      type: object
+      title: Jira
+      properties:
+        type:
+          type: string
+          enum:
+            - JIRA
+          description: The action type.
+        project_id:
+          type: string
+          description: The Jira project ID.
+        issue_type_id:
+          type: string
+          description: The Jira issue type ID.
+        assignee_id:
+          type: string
+          description: The Jira assignee ID.
+        reporter_id:
+          type: string
+          description: The Jira reporter ID.
+        labels:
+          type: array
+          items:
+            type: string
+          description: List of labels for the Jira issue.
+        custom_fields:
+          type: object
+          description: Custom fields for the Jira issue. For more information on custom fields, see the [Jira documentation](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-fields/#api-group-issue-fields).
+    WorkflowActionEmail:
+      type: object
+      title: Email
+      properties:
+        type:
+          type: string
+          enum:
+            - EMAIL
+          description: The action type.
+        target_audience:
+          type: string
+          description: The target audience for the email. Use `ALL` to send to all organization members, or `CUSTOM` to specify recipients manually.
+          enum:
+            - ALL
+            - CUSTOM
+        recipients:
+          type: array
+          items:
+            type: string
+          description: List of email recipients. Required when `target_audience` is `CUSTOM`.
+    WorkflowActionWebhook:
+      type: object
+      title: Webhook
+      properties:
+        type:
+          type: string
+          enum:
+            - WEBHOOK
+          description: The action type.
+        webhook_id:
+          type: string
+          description: The ID of the integration webhook to use.
+    CreateWorkflowRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the workflow.
+        type:
+          type: string
+          description: The type of workflow.
+          enum:
+            - TRIGGERED
+            - SCHEDULED
+        config:
+          $ref: '#/components/schemas/WorkflowConfig'
+          description: The configuration settings for this workflow.
+      required:
+        - name
+        - type
+        - config
+    UpdateWorkflowRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The updated name of the workflow.
+        status:
+          type: string
+          description: The updated status of the workflow.
+          enum:
+            - ENABLED
+            - DISABLED
+        type:
+          type: string
+          description: The updated type of workflow.
+          enum:
+            - TRIGGERED
+            - SCHEDULED
+        config:
+          $ref: '#/components/schemas/WorkflowConfig'
+          description: The updated configuration settings for this workflow.
+    IntegrationWebhook:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this integration webhook.
+        name:
+          type: string
+          description: The name of this integration webhook.
+        vendor:
+          type: string
+          description: The vendor type of this integration webhook.
+          enum:
+            - DATADOG
+            - MSTEAMS
+            - PAGERDUTY
+            - SPLUNK
+            - TINES
+            - CUSTOM
+        status:
+          type: string
+          description: The status of this integration webhook.
+          enum:
+            - ENABLED
+            - DISABLED
+        config:
+          $ref: '#/components/schemas/WebhookConfig'
+          description: The configuration settings for this integration webhook. The concrete implementation is selected by the `vendor` property.
+        create_time:
+          type: string
+          format: date-time
+          description: The timestamp when this integration webhook was created.
+        update_time:
+          type: string
+          format: date-time
+          description: The timestamp when this integration webhook was last updated.
+    WebhookConfig:
+      type: object
+      description: Base configuration for integration webhooks. The actual configuration type is determined by the parent vendor field.
+      oneOf:
+        - $ref: '#/components/schemas/WebhookConfigDatadog'
+        - $ref: '#/components/schemas/WebhookConfigMsTeams'
+        - $ref: '#/components/schemas/WebhookConfigPagerDuty'
+        - $ref: '#/components/schemas/WebhookConfigSplunk'
+        - $ref: '#/components/schemas/WebhookConfigTines'
+        - $ref: '#/components/schemas/WebhookConfigCustom'
+    WebhookConfigCustom:
+      type: object
+      title: Custom
+      properties:
+        url:
+          type: string
+          description: The webhook URL endpoint.
+        headers:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookHeader'
+          description: Custom headers to include in webhook requests.
+        authentication:
+          $ref: '#/components/schemas/WebhookAuthentication'
+          description: Authentication configuration for the webhook.
+    WebhookConfigDatadog:
+      type: object
+      title: Datadog
+      properties:
+        api_key:
+          type: string
+          description: The Datadog API key for authentication.
+        region:
+          type: string
+          description: The Datadog region.
+        service:
+          type: string
+          description: The Datadog service name.
+    WebhookConfigPagerDuty:
+      type: object
+      title: PagerDuty
+      properties:
+        routing_key:
+          type: string
+          description: The PagerDuty routing key.
+    WebhookConfigSplunk:
+      type: object
+      title: Splunk
+      properties:
+        hec_token:
+          type: string
+          description: The Splunk HTTP Event Collector token.
+        hec_uri:
+          type: string
+          description: The Splunk HTTP Event Collector URI.
+    WebhookConfigMsTeams:
+      type: object
+      title: Microsoft Teams
+      properties:
+        url:
+          type: string
+          description: The Microsoft Teams webhook URL.
+        channel_name:
+          type: string
+          description: The Microsoft Teams channel name.
+    WebhookConfigTines:
+      type: object
+      title: Tines
+      properties:
+        url:
+          type: string
+          description: The Tines webhook URL.
+        secret:
+          type: string
+          description: The Tines webhook secret for authentication.
+    WebhookHeader:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The header key.
+        value:
+          type: string
+          description: The header value.
+        encrypted:
+          type: boolean
+          description: Whether the header value is encrypted.
+    WebhookAuthentication:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The authentication type.
+          enum:
+            - BEARER
+            - API_KEY
+        token:
+          type: string
+          description: The Bearer token. Required when type is BEARER.
+        key:
+          type: string
+          description: The API key parameter name (e.g., 'X-API-Key', 'Authorization'). Required when type is API_KEY.
+        value:
+          type: string
+          description: The API key value. Required when type is API_KEY.
+    CreateIntegrationWebhookRequest:
+      type: object
+      required:
+        - name
+        - vendor
+        - config
+      properties:
+        name:
+          type: string
+          description: The name for the integration webhook.
+        vendor:
+          type: string
+          description: The vendor type for the integration webhook.
+          enum:
+            - DATADOG
+            - MSTEAMS
+            - PAGERDUTY
+            - SPLUNK
+            - TINES
+            - CUSTOM
+        config:
+          $ref: '#/components/schemas/WebhookConfig'
+          description: The configuration settings for the integration webhook.
+    UpdateIntegrationWebhookRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The updated name for the integration webhook.
+        status:
+          type: string
+          description: The updated status for the integration webhook.
+          enum:
+            - ENABLED
+            - DISABLED
+        config:
+          $ref: '#/components/schemas/WebhookConfig'
+          description: The updated configuration settings for the integration webhook.
+    ApiEndpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this endpoint.
+        method:
+          type: string
+          description: The HTTP method for this endpoint.
+          enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - HEAD
+            - OPTIONS
+            - TRACE
+        uri:
+          type: string
+          description: The URI path for this endpoint.
+        resource_id:
+          type: string
+          description: The unique identifier of the associated resource.
+        first_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this endpoint was first observed.
+        last_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this endpoint was last observed.
+        domains:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: List of domains associated with this endpoint.
+        status_codes:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: List of HTTP status codes observed for this endpoint.
+        risk_overview:
+          $ref: '#/components/schemas/ApiEndpointRiskOverview'
+          description: Risk assessment overview for this endpoint.
+    ApiEndpointRiskOverview:
+      type: object
+      properties:
+        authentication:
+          $ref: '#/components/schemas/ApiEndpointAuthentication'
+          description: Authentication details for this endpoint.
+        internet_exposure:
+          $ref: '#/components/schemas/ApiEndpointInternetExposure'
+          description: Internet exposure details for this endpoint.
+        sensitive_data_findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiEndpointSensitiveDataFinding'
+          description: List of sensitive data findings associated with this endpoint.
+    ApiEndpointAuthentication:
+      type: object
+      properties:
+        state:
+          type: string
+          description: The authentication state of this endpoint.
+          enum:
+            - AUTHENTICATED
+            - UNAUTHENTICATED
+            - UNKNOWN
+    ApiEndpointInternetExposure:
+      type: object
+      properties:
+        ingress:
+          $ref: '#/components/schemas/ApiEndpointExposureDetails'
+          description: Ingress exposure details for this endpoint.
+    ApiEndpointExposureDetails:
+      type: object
+      properties:
+        last_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this exposure was last observed.
+    ApiEndpointSensitiveDataFinding:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of sensitive data finding.
+        category:
+          type: string
+          description: The category of sensitive data finding.
+        last_seen_time:
+          type: string
+          format: date-time
+          description: The timestamp when this sensitive data finding was last observed.

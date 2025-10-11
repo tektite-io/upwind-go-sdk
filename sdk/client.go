@@ -1,104 +1,238 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 package sdk
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+	"golang.org/x/time/rate"
 )
 
+// HTTPClient interface for making HTTP requests
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type Client struct {
-	baseURL    string
-	orgID      string
-	httpClient HTTPClient
-	oauthCfg   *clientcredentials.Config
-	tokenSrc   oauth2.TokenSource
-	tokenMu    sync.Mutex
-	token      *oauth2.Token
-	retries    int
+// Logger interface for logging
+type Logger interface {
+	Printf(format string, v ...interface{})
+	Println(v ...interface{})
 }
 
-func NewClient(baseURL, tokenURL, clientID, clientSecret, orgID, scope string, retries int, httpClient HTTPClient) *Client {
-	cfg := &clientcredentials.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		TokenURL:     tokenURL,
-		Scopes:       []string{scope},
-		AuthStyle:    oauth2.AuthStyleInParams,
+// DefaultLogger is a simple logger that writes to standard output
+type DefaultLogger struct{}
+
+func (l *DefaultLogger) Printf(format string, v ...interface{}) {
+	log.Printf(format, v...)
+}
+
+func (l *DefaultLogger) Println(v ...interface{}) {
+	log.Println(v...)
+}
+
+// NoOpLogger is a logger that doesn't log anything
+type NoOpLogger struct{}
+
+func (l *NoOpLogger) Printf(format string, v ...interface{}) {}
+func (l *NoOpLogger) Println(v ...interface{})               {}
+
+// Client is the main SDK client for interacting with the Upwind API
+type Client struct {
+	config      *Config
+	httpClient  HTTPClient
+	oauthCfg    *clientcredentials.Config
+	tokenSrc    oauth2.TokenSource
+	tokenMu     sync.Mutex
+	token       *oauth2.Token
+	rateLimiter *rate.Limiter
+	logger      Logger
+}
+
+// NewClient creates a new Upwind API client with the provided configuration
+func NewClient(cfg *Config) (*Client, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 10 * time.Second}
+	oauthCfg := &clientcredentials.Config{
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.ClientSecret,
+		TokenURL:     cfg.GetTokenURL(),
+		EndpointParams: map[string][]string{
+			"audience": {cfg.GetAudience()},
+		},
+		AuthStyle: oauth2.AuthStyleInParams,
 	}
 
-	tokenSrc := cfg.TokenSource(context.Background())
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 10,
+			IdleConnTimeout:     90 * time.Second,
+		},
+	}
+
+	tokenSrc := oauthCfg.TokenSource(context.Background())
+
+	// Create rate limiter
+	var rateLimiter *rate.Limiter
+	if cfg.RateLimitPerSecond > 0 {
+		rateLimiter = rate.NewLimiter(rate.Limit(cfg.RateLimitPerSecond), cfg.RateLimitPerSecond)
+	}
 
 	return &Client{
-		baseURL:    baseURL,
-		orgID:      orgID,
-		httpClient: httpClient,
-		oauthCfg:   cfg,
-		tokenSrc:   tokenSrc,
-		retries:    retries,
-	}
+		config:      cfg,
+		httpClient:  httpClient,
+		oauthCfg:    oauthCfg,
+		tokenSrc:    tokenSrc,
+		rateLimiter: rateLimiter,
+		logger:      &NoOpLogger{}, // Default to no logging
+	}, nil
 }
 
+// NewClientFromEnv creates a new client from environment variables
+func NewClientFromEnv() (*Client, error) {
+	cfg, err := LoadConfigFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(cfg)
+}
+
+// NewClientFromFile creates a new client from a configuration file
+func NewClientFromFile(path string) (*Client, error) {
+	cfg, err := LoadConfigFromFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return NewClient(cfg)
+}
+
+// SetLogger sets the logger for the client
+func (c *Client) SetLogger(logger Logger) {
+	c.logger = logger
+}
+
+// EnableLogging enables logging with the default logger
+func (c *Client) EnableLogging() {
+	c.logger = &DefaultLogger{}
+}
+
+// GetOrganizationID returns the organization ID
+func (c *Client) GetOrganizationID() string {
+	return c.config.OrganizationID
+}
+
+// getToken retrieves a valid OAuth2 token, refreshing if necessary
 func (c *Client) getToken(ctx context.Context) (*oauth2.Token, error) {
 	c.tokenMu.Lock()
 	defer c.tokenMu.Unlock()
 
+	// Return cached token if still valid with 60 second buffer
 	if c.token != nil && c.token.Valid() && time.Until(c.token.Expiry) > 60*time.Second {
 		return c.token, nil
 	}
 
-	token, err := c.tokenSrc.Token()
+	c.logger.Println("Refreshing OAuth2 token...")
+	token, err := c.oauthCfg.TokenSource(ctx).Token()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token: %w", err)
 	}
 
 	c.token = token
+	c.logger.Println("Token refreshed successfully")
 	return token, nil
 }
 
+// doRequest executes an HTTP request with retries, rate limiting, and proper error handling
 func (c *Client) doRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
+	// Apply rate limiting
+	if c.rateLimiter != nil {
+		if err := c.rateLimiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("rate limiter error: %w", err)
+		}
+	}
+
 	var lastErr error
-	for i := 0; i <= c.retries; i++ {
+	backoff := 100 * time.Millisecond
+
+	for attempt := 0; attempt <= c.config.MaxRetries; attempt++ {
+		// Get valid token
 		token, err := c.getToken(ctx)
-
-		//log.Printf("token: %+v\n", token)
-
 		if err != nil {
 			return nil, fmt.Errorf("token error: %w", err)
 		}
 
-		req = req.Clone(ctx)
-		req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+		// Clone request and add auth header
+		reqClone := req.Clone(ctx)
+		reqClone.Header.Set("Authorization", "Bearer "+token.AccessToken)
+		reqClone.Header.Set("User-Agent", UserAgent())
+		reqClone.Header.Set("Accept", "application/json")
 
-		resp, err := c.httpClient.Do(req)
+		c.logger.Printf("Request: %s %s (attempt %d/%d)", reqClone.Method, reqClone.URL.String(), attempt+1, c.config.MaxRetries+1)
+
+		// Execute request
+		resp, err := c.httpClient.Do(reqClone)
 		if err != nil {
-			lastErr = err
-			time.Sleep(time.Duration(i+1) * 100 * time.Millisecond)
+			lastErr = fmt.Errorf("request failed: %w", err)
+			c.logger.Printf("Request error: %v", lastErr)
+
+			if attempt < c.config.MaxRetries {
+				time.Sleep(backoff)
+				backoff *= 2 // Exponential backoff
+			}
 			continue
 		}
 
-		if resp.StatusCode == http.StatusUnauthorized && i < c.retries {
+		// Handle 401 Unauthorized - token might be invalid
+		if resp.StatusCode == http.StatusUnauthorized && attempt < c.config.MaxRetries {
+			c.logger.Println("Received 401 Unauthorized, invalidating token and retrying...")
 			c.tokenMu.Lock()
 			c.token = nil
 			c.tokenMu.Unlock()
 			_ = resp.Body.Close()
+			time.Sleep(backoff)
+			backoff *= 2
+			continue
+		}
+
+		// Handle 429 Too Many Requests
+		if resp.StatusCode == http.StatusTooManyRequests && attempt < c.config.MaxRetries {
+			retryAfter := resp.Header.Get("Retry-After")
+			waitDuration := backoff
+			if retryAfter != "" {
+				if duration, err := time.ParseDuration(retryAfter + "s"); err == nil {
+					waitDuration = duration
+				}
+			}
+			c.logger.Printf("Rate limited (429), waiting %v before retry...", waitDuration)
+			_ = resp.Body.Close()
+			time.Sleep(waitDuration)
+			backoff *= 2
+			continue
+		}
+
+		// Handle 5xx errors with retry
+		if resp.StatusCode >= 500 && attempt < c.config.MaxRetries {
+			c.logger.Printf("Server error (%d), retrying...", resp.StatusCode)
+			_ = resp.Body.Close()
+			time.Sleep(backoff)
+			backoff *= 2
 			continue
 		}
 
 		return resp, nil
 	}
 
-	return nil, fmt.Errorf("all retries failed: %w", lastErr)
+	return nil, fmt.Errorf("all retries exhausted: %w", lastErr)
 }
