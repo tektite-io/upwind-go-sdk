@@ -6,6 +6,9 @@
   "max_retries": 3,
   "max_concurrency": 10,
   "page_size": 100,
-  "rate_limit_per_second": 10
+  "rate_limit_per_second": 10,
+  "request_timeout": "30s",
+  "idle_conn_timeout": "30s",
+  "disable_http2": false,
+  "connection_refresh_pages": 100
 }
-

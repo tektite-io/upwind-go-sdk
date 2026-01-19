@@ -18,6 +18,9 @@ import (
 // This is memory-efficient for large datasets. The channel will be closed when done.
 // Returns an error channel that will receive any error that occurs during streaming.
 //
+// For very large datasets (millions of records), the HTTP client will automatically
+// refresh connections every ConnectionRefreshPages to avoid HTTP/2 GOAWAY issues.
+//
 // Example - streaming (memory efficient):
 //
 //	findings, errCh := client.ListConfigurationFindings(ctx, query)
@@ -32,6 +35,13 @@ import (
 //
 //	findingsCh, errCh := client.ListConfigurationFindings(ctx, query)
 //	allFindings, err := sdk.CollectAll(ctx, findingsCh, errCh)
+//
+// Example - process in chunks (memory efficient):
+//
+//	findingsCh, errCh := client.ListConfigurationFindings(ctx, query)
+//	err := sdk.CollectInChunks(ctx, findingsCh, errCh, 1000, func(chunk []ConfigurationFinding) error {
+//	    return processBatch(chunk)
+//	})
 func (c *Client) ListConfigurationFindings(ctx context.Context, query *ConfigurationFindingsQuery) (<-chan ConfigurationFinding, <-chan error) {
 	findingsCh := make(chan ConfigurationFinding, 100)
 	errCh := make(chan error, 1)
@@ -45,11 +55,28 @@ func (c *Client) ListConfigurationFindings(ctx context.Context, query *Configura
 		}
 
 		pageToken := ""
+		pageCount := 0
+		totalItems := 0
+
 		for {
+			// Refresh HTTP client periodically to avoid long-lived connection issues
+			if c.config.ConnectionRefreshPages > 0 && pageCount > 0 && pageCount%c.config.ConnectionRefreshPages == 0 {
+				c.RefreshHTTPClient()
+				c.logger.Printf("Refreshed HTTP client after %d pages (%d total items)", pageCount, totalItems)
+			}
+
 			findings, nextToken, err := c.listConfigurationFindingsPage(ctx, query, pageToken)
 			if err != nil {
 				errCh <- err
 				return
+			}
+
+			pageCount++
+			totalItems += len(findings)
+
+			// Log progress for large datasets
+			if pageCount%100 == 0 {
+				c.logger.Printf("Progress: fetched %d pages, %d total items", pageCount, totalItems)
 			}
 
 			for _, finding := range findings {
@@ -62,6 +89,7 @@ func (c *Client) ListConfigurationFindings(ctx context.Context, query *Configura
 			}
 
 			if nextToken == "" {
+				c.logger.Printf("Completed: fetched %d pages, %d total items", pageCount, totalItems)
 				break
 			}
 			pageToken = nextToken

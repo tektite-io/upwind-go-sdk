@@ -6,6 +6,7 @@ package sdk
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -55,6 +56,7 @@ type Client struct {
 	token       *oauth2.Token
 	rateLimiter *rate.Limiter
 	logger      Logger
+	clientMu    sync.Mutex // Protects httpClient during refresh
 }
 
 // NewClient creates a new Upwind API client with the provided configuration
@@ -73,15 +75,6 @@ func NewClient(cfg *Config) (*Client, error) {
 		AuthStyle: oauth2.AuthStyleInParams,
 	}
 
-	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 10,
-			IdleConnTimeout:     90 * time.Second,
-		},
-	}
-
 	tokenSrc := oauthCfg.TokenSource(context.Background())
 
 	// Create rate limiter
@@ -90,14 +83,58 @@ func NewClient(cfg *Config) (*Client, error) {
 		rateLimiter = rate.NewLimiter(rate.Limit(cfg.RateLimitPerSecond), cfg.RateLimitPerSecond)
 	}
 
-	return &Client{
+	client := &Client{
 		config:      cfg,
-		httpClient:  httpClient,
 		oauthCfg:    oauthCfg,
 		tokenSrc:    tokenSrc,
 		rateLimiter: rateLimiter,
 		logger:      &NoOpLogger{}, // Default to no logging
-	}, nil
+	}
+
+	// Create initial HTTP client
+	client.httpClient = client.createHTTPClient()
+
+	return client, nil
+}
+
+// createHTTPClient creates a new HTTP client with proper connection management
+// This is used both at initialization and when refreshing connections
+func (c *Client) createHTTPClient() HTTPClient {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     c.config.IdleConnTimeout,
+		DisableKeepAlives:   false,
+		// Force connection closure after response if needed for very large datasets
+		// DisableKeepAlives can be set to true via environment if HTTP/2 issues persist
+	}
+
+	// Configure HTTP/2 or disable it based on config
+	if c.config.DisableHTTP2 {
+		// Force HTTP/1.1 by disabling HTTP/2
+		// Setting TLSNextProto to an empty map disables HTTP/2
+		transport.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
+		c.logger.Println("HTTP/2 disabled, using HTTP/1.1")
+	} else {
+		// HTTP/2 is enabled by default in Go 1.6+
+		// The transport will automatically negotiate HTTP/2 with proper connection management
+		c.logger.Println("HTTP/2 enabled with connection management")
+	}
+
+	return &http.Client{
+		Timeout:   c.config.RequestTimeout,
+		Transport: transport,
+	}
+}
+
+// RefreshHTTPClient creates a new HTTP client, replacing the old one
+// This is useful for long-running operations to avoid HTTP/2 GOAWAY issues
+func (c *Client) RefreshHTTPClient() {
+	c.clientMu.Lock()
+	defer c.clientMu.Unlock()
+
+	c.logger.Println("Refreshing HTTP client to avoid connection issues...")
+	c.httpClient = c.createHTTPClient()
 }
 
 // NewClientFromEnv creates a new client from environment variables
@@ -181,8 +218,12 @@ func (c *Client) doRequest(ctx context.Context, req *http.Request) (*http.Respon
 
 		c.logger.Printf("Request: %s %s (attempt %d/%d)", reqClone.Method, reqClone.URL.String(), attempt+1, c.config.MaxRetries+1)
 
-		// Execute request
-		resp, err := c.httpClient.Do(reqClone)
+		// Execute request with client mutex to handle concurrent refresh
+		c.clientMu.Lock()
+		httpClient := c.httpClient
+		c.clientMu.Unlock()
+
+		resp, err := httpClient.Do(reqClone)
 		if err != nil {
 			lastErr = fmt.Errorf("request failed: %w", err)
 			c.logger.Printf("Request error: %v", lastErr)

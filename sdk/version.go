@@ -5,7 +5,7 @@
 package sdk
 
 // Version is the current version of the Upwind Go SDK (format: vX.Y.Z)
-const Version = "v1.0.1"
+const Version = "v1.0.2"
 
 // UserAgent returns the User-Agent string for HTTP requests
 func UserAgent() string {

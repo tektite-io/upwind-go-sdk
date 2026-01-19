@@ -28,7 +28,7 @@ go get github.com/tektite-io/upwind-go-sdk
 
 **Using Go:**
 ```bash
-go install github.com/tektite-io/upwind-go-sdk/cmd/upwind@v1.0.0
+go install github.com/tektite-io/upwind-go-sdk/cmd/upwind@v1.0.2
 ```
 
 **From Source:**
@@ -41,7 +41,7 @@ make build
 
 **Using Docker:**
 ```bash
-docker pull ghcr.io/tektite-io/upwind-go-sdk:1.0.0
+docker pull ghcr.io/tektite-io/upwind-go-sdk:1.0.2
 ```
 
 ## Quick Start
@@ -120,7 +120,11 @@ upwind threat-detections --status OPEN
 | `UPWIND_MAX_RETRIES` | Maximum retry attempts | No | 3 |
 | `UPWIND_MAX_CONCURRENCY` | Max concurrent requests | No | 10 |
 | `UPWIND_PAGE_SIZE` | Items per page | No | 100 |
-| `UPWIND_RATE_LIMIT_PER_SECOND` | Rate limit (req/sec) | No | 10 |
+| `UPWIND_RATE_LIMIT` | Rate limit (req/sec) | No | 10 |
+| `UPWIND_REQUEST_TIMEOUT` | Request timeout (seconds) | No | 30 |
+| `UPWIND_IDLE_CONN_TIMEOUT` | Idle connection timeout (seconds) | No | 30 |
+| `UPWIND_DISABLE_HTTP2` | Disable HTTP/2 (true/false) | No | false |
+| `UPWIND_CONNECTION_REFRESH_PAGES` | Pages before HTTP client refresh | No | 100 |
 
 ### Configuration File
 
@@ -135,7 +139,11 @@ Create a `config.json` file:
   "max_retries": 3,
   "max_concurrency": 10,
   "page_size": 100,
-  "rate_limit_per_second": 10
+  "rate_limit_per_second": 10,
+  "request_timeout": "30s",
+  "idle_conn_timeout": "30s",
+  "disable_http2": false,
+  "connection_refresh_pages": 100
 }
 ```
 
@@ -147,6 +155,82 @@ client, err := sdk.NewClientFromFile("config.json")
 Or with the CLI:
 ```bash
 upwind --config config.json vulnerability-findings
+```
+
+## Memory-Efficient Processing for Large Datasets
+
+The SDK includes specialized features for handling very large datasets (millions of records) efficiently, avoiding HTTP/2 connection issues and memory exhaustion.
+
+### Automatic HTTP Connection Management
+
+For large datasets, the SDK automatically refreshes HTTP connections to avoid HTTP/2 GOAWAY errors that can occur with long-running connections:
+
+```go
+// Configure connection refresh (default: every 100 pages)
+export UPWIND_CONNECTION_REFRESH_PAGES=100
+
+// Or disable HTTP/2 entirely if issues persist
+export UPWIND_DISABLE_HTTP2=true
+```
+
+The SDK will automatically:
+- Refresh HTTP connections every N pages (configurable)
+- Log progress every 100 pages
+- Use shorter idle connection timeouts (30s default vs 90s)
+- Handle HTTP/2 GOAWAY gracefully
+
+### Processing Data in Chunks
+
+For memory-efficient processing of large datasets, use the chunking helpers:
+
+```go
+// Option 1: Process in chunks with callback
+findingsCh, errCh := client.ListVulnerabilityFindings(ctx, query)
+err := sdk.CollectInChunks(ctx, findingsCh, errCh, 1000, func(chunk []sdk.VulnerabilityFinding) error {
+    // Process 1000 findings at a time
+    // e.g., write to database, send to API, etc.
+    return processBatch(chunk)
+})
+
+// Option 2: Stream chunks via channel
+findingsCh, errCh := client.ListVulnerabilityFindings(ctx, query)
+chunksCh := sdk.StreamInChunks(ctx, findingsCh, 1000)
+for chunk := range chunksCh {
+    processBatch(chunk)
+}
+if err := <-errCh; err != nil {
+    log.Fatal(err)
+}
+```
+
+### CloudQuery Plugin Usage
+
+For CloudQuery plugins handling large datasets, configure the SDK for optimal performance:
+
+```go
+cfg := sdk.DefaultConfig()
+cfg.ClientID = "your-client-id"
+cfg.ClientSecret = "your-client-secret"
+cfg.OrganizationID = "your-org-id"
+cfg.PageSize = 100 // Smaller pages for better streaming
+cfg.ConnectionRefreshPages = 100 // Refresh every 100 pages
+cfg.IdleConnTimeout = 30 * time.Second // Shorter timeout
+cfg.RequestTimeout = 30 * time.Second
+
+client, err := sdk.NewClient(cfg)
+if err != nil {
+    return err
+}
+
+// Enable logging to track progress
+client.EnableLogging()
+
+// Stream with chunking
+findingsCh, errCh := client.ListVulnerabilityFindings(ctx, query)
+err = sdk.CollectInChunks(ctx, findingsCh, errCh, 1000, func(chunk []sdk.VulnerabilityFinding) error {
+    // Send to CloudQuery
+    return sendToCloudQuery(chunk)
+})
 ```
 
 ## SDK Usage Examples
@@ -417,7 +501,9 @@ Full API documentation is available at [pkg.go.dev](https://pkg.go.dev/github.co
 
 ### Helper Functions
 
-- `CollectAll(resultsCh, errCh)` - Collect all streaming results into a slice
+- `CollectAll(ctx, resultsCh, errCh)` - Collect all streaming results into a slice
+- `CollectInChunks(ctx, resultsCh, errCh, chunkSize, processFunc)` - Process streaming results in chunks for memory efficiency
+- `StreamInChunks(ctx, resultsCh, chunkSize)` - Convert item stream to chunk stream
 - `sdk.Bool(v)` - Helper for creating boolean pointers
 - `sdk.Int(v)` - Helper for creating integer pointers
 - `sdk.String(v)` - Helper for creating string pointers
@@ -448,7 +534,6 @@ This project is licensed under the Mozilla Public License 2.0 - see the LICENSE 
 
 - 📧 Email: info@tektite.io
 - 🐛 Issues: [GitHub Issues](https://github.com/tektite-io/upwind-go-sdk/issues)
-- 📚 Documentation: [pkg.go.dev](https://pkg.go.dev/github.com/tektite-io/upwind-go-sdk)
 
 ## Acknowledgments
 

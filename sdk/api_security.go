@@ -18,6 +18,9 @@ import (
 // This is memory-efficient for large datasets. The channel will be closed when done.
 // Returns an error channel that will receive any error that occurs during streaming.
 //
+// For very large datasets (millions of records), the HTTP client will automatically
+// refresh connections every ConnectionRefreshPages to avoid HTTP/2 GOAWAY issues.
+//
 // Example - streaming (memory efficient):
 //
 //	endpoints, errCh := client.ListApiEndpoints(ctx, query)
@@ -32,6 +35,13 @@ import (
 //
 //	endpointsCh, errCh := client.ListApiEndpoints(ctx, query)
 //	allEndpoints, err := sdk.CollectAll(ctx, endpointsCh, errCh)
+//
+// Example - process in chunks (memory efficient):
+//
+//	endpointsCh, errCh := client.ListApiEndpoints(ctx, query)
+//	err := sdk.CollectInChunks(ctx, endpointsCh, errCh, 1000, func(chunk []ApiEndpoint) error {
+//	    return processBatch(chunk)
+//	})
 func (c *Client) ListApiEndpoints(ctx context.Context, query *ApiEndpointsQuery) (<-chan ApiEndpoint, <-chan error) {
 	endpointsCh := make(chan ApiEndpoint, 100)
 	errCh := make(chan error, 1)
@@ -49,11 +59,28 @@ func (c *Client) ListApiEndpoints(ctx context.Context, query *ApiEndpointsQuery)
 		}
 
 		pageToken := ""
+		pageCount := 0
+		totalItems := 0
+
 		for {
+			// Refresh HTTP client periodically to avoid long-lived connection issues
+			if c.config.ConnectionRefreshPages > 0 && pageCount > 0 && pageCount%c.config.ConnectionRefreshPages == 0 {
+				c.RefreshHTTPClient()
+				c.logger.Printf("Refreshed HTTP client after %d pages (%d total items)", pageCount, totalItems)
+			}
+
 			endpoints, nextToken, err := c.listApiEndpointsPage(ctx, query, pageToken)
 			if err != nil {
 				errCh <- err
 				return
+			}
+
+			pageCount++
+			totalItems += len(endpoints)
+
+			// Log progress for large datasets
+			if pageCount%100 == 0 {
+				c.logger.Printf("Progress: fetched %d pages, %d total items", pageCount, totalItems)
 			}
 
 			for _, endpoint := range endpoints {
@@ -66,6 +93,7 @@ func (c *Client) ListApiEndpoints(ctx context.Context, query *ApiEndpointsQuery)
 			}
 
 			if nextToken == "" {
+				c.logger.Printf("Completed: fetched %d pages, %d total items", pageCount, totalItems)
 				break
 			}
 			pageToken = nextToken

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 // Region represents the Upwind API region
@@ -45,16 +46,32 @@ type Config struct {
 	PageSize int `json:"page_size"`
 	// RateLimitPerSecond is the maximum number of requests per second (0 = no limit)
 	RateLimitPerSecond int `json:"rate_limit_per_second"`
+
+	// HTTP/2 Connection Management Settings (to avoid long-lived connection issues)
+
+	// RequestTimeout is the timeout for individual HTTP requests
+	RequestTimeout time.Duration `json:"request_timeout"`
+	// IdleConnTimeout is how long idle connections are kept open
+	IdleConnTimeout time.Duration `json:"idle_conn_timeout"`
+	// DisableHTTP2 forces HTTP/1.1 to avoid HTTP/2 GOAWAY issues with long-running connections
+	DisableHTTP2 bool `json:"disable_http2"`
+	// ConnectionRefreshPages is the number of pages to fetch before refreshing the HTTP client
+	// This helps avoid HTTP/2 connection issues with very large datasets (0 = never refresh)
+	ConnectionRefreshPages int `json:"connection_refresh_pages"`
 }
 
 // DefaultConfig returns a Config with default values
 func DefaultConfig() *Config {
 	return &Config{
-		Region:             RegionUS,
-		MaxRetries:         3,
-		MaxConcurrency:     10,
-		PageSize:           100,
-		RateLimitPerSecond: 10,
+		Region:                 RegionUS,
+		MaxRetries:             3,
+		MaxConcurrency:         10,
+		PageSize:               100,
+		RateLimitPerSecond:     10,
+		RequestTimeout:         30 * time.Second,
+		IdleConnTimeout:        30 * time.Second, // Shorter than default 90s to avoid HTTP/2 GOAWAY
+		DisableHTTP2:           false,            // Keep HTTP/2 by default, but with proper connection management
+		ConnectionRefreshPages: 100,              // Refresh HTTP client every 100 pages for large datasets
 	}
 }
 
@@ -70,6 +87,10 @@ func DefaultConfig() *Config {
 //   - UPWIND_MAX_CONCURRENCY: Maximum concurrent requests (default: 10)
 //   - UPWIND_PAGE_SIZE: Default page size (default: 100)
 //   - UPWIND_RATE_LIMIT: Requests per second limit (default: 10)
+//   - UPWIND_REQUEST_TIMEOUT: Request timeout in seconds (default: 30)
+//   - UPWIND_IDLE_CONN_TIMEOUT: Idle connection timeout in seconds (default: 30)
+//   - UPWIND_DISABLE_HTTP2: Set to "true" to disable HTTP/2 (default: false)
+//   - UPWIND_CONNECTION_REFRESH_PAGES: Number of pages before refreshing connection (default: 100)
 func LoadConfigFromEnv() (*Config, error) {
 	cfg := DefaultConfig()
 
@@ -123,6 +144,33 @@ func LoadConfigFromEnv() (*Config, error) {
 		var limit int
 		if _, err := fmt.Sscanf(rateLimit, "%d", &limit); err == nil {
 			cfg.RateLimitPerSecond = limit
+		}
+	}
+
+	// Parse duration values
+	if requestTimeout := os.Getenv("UPWIND_REQUEST_TIMEOUT"); requestTimeout != "" {
+		var seconds int
+		if _, err := fmt.Sscanf(requestTimeout, "%d", &seconds); err == nil {
+			cfg.RequestTimeout = time.Duration(seconds) * time.Second
+		}
+	}
+
+	if idleConnTimeout := os.Getenv("UPWIND_IDLE_CONN_TIMEOUT"); idleConnTimeout != "" {
+		var seconds int
+		if _, err := fmt.Sscanf(idleConnTimeout, "%d", &seconds); err == nil {
+			cfg.IdleConnTimeout = time.Duration(seconds) * time.Second
+		}
+	}
+
+	// Parse boolean values
+	if disableHTTP2 := os.Getenv("UPWIND_DISABLE_HTTP2"); disableHTTP2 != "" {
+		cfg.DisableHTTP2 = strings.ToLower(disableHTTP2) == "true"
+	}
+
+	if connectionRefreshPages := os.Getenv("UPWIND_CONNECTION_REFRESH_PAGES"); connectionRefreshPages != "" {
+		var pages int
+		if _, err := fmt.Sscanf(connectionRefreshPages, "%d", &pages); err == nil {
+			cfg.ConnectionRefreshPages = pages
 		}
 	}
 
